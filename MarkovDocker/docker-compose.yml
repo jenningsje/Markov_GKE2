@@ -1,0 +1,350 @@
+services:
+  ssh-server:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/sshserver:latest
+    ports:
+      - "2222:22"
+    volumes:
+      - ssh-data:/root/.ssh
+    resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+          
+  Markov:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.Markov
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:latest
+    stdin_open: true
+    tty: true
+    dns:
+      - "8.8.8.8"
+      - "1.1.1.1"
+    ports:
+      - "4000:4000"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 12G
+        reservations:
+          cpus: '4'
+          memory: 12G
+    networks:
+      - appnet
+
+  simulator:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.simulator
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/simulatorapp:latest
+    ports:
+      - "4001:80"
+    volumes:
+      - ./html:/etc/nginx/html
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 128Mi
+        reservations:
+          cpus: '0.05'
+          memory: 64Mi
+    networks:
+      - appnet
+
+  nodeapp:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/nodeapp:latest
+    stdin_open: true
+    tty: true
+    dns:
+      - "8.8.8.8"
+      - "1.1.1.1"
+    ports:
+      - "5001:80"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 128Mi
+        reservations:
+          cpus: '0.05'
+          memory: 64Mi
+    networks:
+      - appnet
+
+  downloadapp:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.download
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/downloadapp:latest
+    stdin_open: true
+    tty: true
+    dns:
+      - "8.8.8.8"
+      - "1.1.1.1"
+    ports:
+      - "3001:80"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+        - appnet
+
+  flaskapp:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.flask
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/flaskapp:latest
+    stdin_open: true
+    tty: true
+    dns:
+      - "8.8.8.8"
+      - "1.1.1.1"
+    ports:
+      - "8000:8000"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+  healthapp:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.health
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/healthapp:latest
+    stdin_open: true
+    tty: true
+    dns:
+      - "8.8.8.8"
+      - "1.1.1.1"
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./certs:/etc/nginx/certs
+      - ./nftables.nft:/etc/nftables.nft
+    command: /bin/sh /opt/app/lightdock/server_health.sh
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+  viewer:
+    platform: linux/amd64
+    build: ../Markov-Viewer
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/viewer:latest
+    ports:
+      - "8083:80"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    restart: unless-stopped
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+  codel:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/codel:latest
+    build:
+      context: ../MarkovASI/MarkovASIopen
+      no_cache: true
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8887:8080"
+    env_file:
+      - ../MarkovASI/MarkovASIopen/.env
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+  db:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/db:latest
+    build:
+      context: ../login/db
+      dockerfile: Dockerfile.postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+  login:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/login:latest
+    build:
+      context: ../login/login
+      dockerfile: Dockerfile.login
+    ports:
+      - "1112:80"
+    volumes:
+      - tor-keys:/var/lib/tor/my_service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - db
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+  backend:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/backend:latest
+    build:
+      context: ../login/backend
+      dockerfile: Dockerfile.backend
+    ports:
+      - "1114:1114"
+    volumes:
+      - tor-keys:/var/lib/tor/my_service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+    - db
+  deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+      networks:
+        - appnet
+
+  apps:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/apps:latest
+    build:
+      context: ../login/apps
+      dockerfile: Dockerfile.apps
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "1113:80"
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+  gateway:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/gateway:latest
+    build:
+      context: ../login/gateway
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "1115:80"
+    volumes:
+      - tor-keys:/var/lib/tor/my_service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    deploy:
+      resources:
+      limits:
+        cpus: '0.1'
+        memory: 128Mi
+      reservations:
+        cpus: '0.05'
+        memory: 64Mi
+    networks:
+      - appnet
+
+volumes:
+  markov_app:
+  sshvolume:
+  pgdata:
+  postgres-data:
+  tor-keys:
+  ssh-data:
+    driver: local
+
+networks:
+  appnet:     

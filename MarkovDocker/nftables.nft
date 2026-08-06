@@ -1,0 +1,44 @@
+#!/usr/sbin/nft -f
+# Minimal nftables for Docker container: allow DNS, HTTPS, ICMP
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # Allow loopback
+        iifname lo accept comment "Allow local input"
+
+        # Accept established/related connections
+        ct state { established, related } accept comment "Allow responses to outbound connections"
+
+        # Accept ICMP (optional, for ping)
+        ip protocol icmp accept comment "Allow ICMPv4"
+        icmpv6 type { echo-request, echo-reply, destination-unreachable, time-exceeded } accept comment "Allow ICMPv6 basics"
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy drop;
+
+        # Allow loopback
+        oifname lo accept comment "Allow local output"
+
+        # Allow all DNS queries
+        udp dport 53 accept comment "Allow outbound DNS queries"
+
+        # Allow HTTPS outbound
+        tcp dport 443 accept comment "Allow HTTPS outbound"
+
+        # Accept established/related traffic
+        ct state { established, related } accept comment "Allow replies to outbound connections"
+
+        # Optional: allow ICMP outbound
+        ip protocol icmp accept comment "Allow ICMPv4 out"
+        icmpv6 type { echo-request, echo-reply, destination-unreachable, time-exceeded } accept comment "Allow ICMPv6 out"
+    }
+}

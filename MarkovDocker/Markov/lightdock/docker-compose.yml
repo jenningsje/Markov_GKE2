@@ -1,0 +1,151 @@
+services:
+  ssh-server:
+    build:
+        context: .
+        dockerfile: Dockerfile.ssh
+    image: ssh-server
+    ports:
+      - "2222:22"
+    security_opt:
+      - seccomp:~/seccomp/seccomp.json
+    volumes:
+      - ssh-data:/root/.ssh
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  Markov:
+    build:
+      context: .
+      dockerfile: Dockerfile.Markov
+    image: jenningsje/lightdock
+    ports:
+      - "4000:4000"
+    security_opt:
+      - seccomp:~/seccomp/seccomp.json
+    volumes:
+      - markov_app:/opt/app/MarkovProprietary/pipelinestages/app/mount
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 12G
+        reservations:
+          cpus: '4'
+          memory: 12G
+
+  nginx:
+    build:
+        context: .
+        dockerfile: Dockerfile.nginx
+    image: nginx:latest
+    ports:
+      - "3000:80"
+    security_opt:
+      - seccomp:~/seccomp/seccomp.json
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./html:/etc/nginx/html
+    depends_on:
+      - node-app
+      - flask-app
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  node-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    image: jenningsje/node-app
+    ports:
+      - "5000:5000"
+    security_opt:
+      - seccomp:~/seccomp/seccomp.json
+    volumes:
+      - markov_app:/opt/app/MarkovProprietary/pipelinestages/app/mount
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  download-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.download
+    image: jenningsje/download-app
+    ports:
+      - "3001:3001"
+    security_opt:
+      - seccomp:~/seccomp/seccomp.json
+    volumes:
+      - markov_app:/opt/app/MarkovProprietary/pipelinestages/app/mount
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  flask-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.flask
+    image: jenningsje/flask-app
+    ports:
+      - "8000:8000"
+    security_opt:
+      - seccomp:~/seccomp/seccomp.json
+    volumes:
+      - markov_app:/opt/app/MarkovProprietary/pipelinestages/app/mount
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  health-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.flask
+    image: jenningsje/health-app
+    ports:
+      - "3003:3003"
+    security_opt:
+      - seccomp:~/seccomp/seccomp.json
+    volumes:
+      - markov_app:/opt/app/MarkovProprietary/pipelinestages/app/mount
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+volumes:
+  markov_app:
+  lightdock_vol:
+  sshvolume:
+  ssh-data:
+    driver: local

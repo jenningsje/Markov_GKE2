@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markov-Eklypse Simulator</title>
+  <style>
+    body {
+      background-color: rgb(60, 59, 59); /* Set the background color */
+    }
+
+    .input_wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 50%;
+      margin-bottom: 10px; /* Decreased space between search bar and button */
+    }
+
+    .button-84 {
+      align-items: center;
+      background-color: initial;
+      background-image: linear-gradient(#464d55, #25292e);
+      border-radius: 8px;
+      border-width: 0;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, .1), 0 3px 6px rgba(0, 0, 0, .05);
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      flex-direction: column;
+      font-family: expo-brand-demi, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      font-size: 18px;
+      height: 52px;
+      justify-content: center;
+      line-height: 1;
+      margin: 0;
+      outline: none;
+      padding: 0 32px;
+      text-align: center;
+      text-decoration: none;
+      transition: all 150ms;
+      vertical-align: baseline;
+      white-space: nowrap;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      margin-top: 10px; /* Decreased space above the button */
+    }
+
+    .button-84:hover {
+      box-shadow: rgba(0, 1, 0, .2) 0 2px 8px;
+      opacity: .85;
+    }
+
+    .button-84:active {
+      outline: 0;
+    }
+
+    .button-84:focus {
+      box-shadow: rgba(0, 0, 0, .5) 0 0 0 3px;
+    }
+
+    .search-button:hover svg {
+      outline: 2px solid black;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 420px) {
+      .button-84 {
+        height: 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">RUNNING MARKOV</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">Instructions</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(1) Use MarkovBot to ask for two proteins with the corresponding properties of your choices that you plan to run in the docking simulation.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(2) The Simulator uses glowworm swarm optimization and quantum statistical field theoretic corrections with 96.63% accuracy to achieve optimal results.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(3) Submit two proteins that wish to simulate the docking simulation with in the platform.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(4) If you entered a bad entry try again.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(5) Select the number of cores from 1 to four that you wish to use for the simulation, in the majority of cases you will need 1 core, 1000 glowworms and 10 steps.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(5) Select the number of glowworms you wish to use for the simulation.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(6) Select the number of steps you wish to use for the simulation.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(7) Each docking simulation will take a few hours to complete and you can submit hundreds per thousands of simulations per day if you wish to do so.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(8) Afterwards it is advised that the pdb file be used in expdrimental equipment to verify the treatment in the laboratory.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(9) The Markov Eklypse is to be used for medical purposes only. Uses in the development in pathogens or weapons of mass destruction are stricly forbidden.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(10) In addiction the Markov Eklypse is not to be intended to be used for Eugenics purposes. This does not apply to age related diseases or health maladies.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(11) This does not apply to the saving of lives either. In accordance with medical ethics such uses are humane and not forbidden.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(12) By using our software you consent that you will abide by these rules and that they will be enforced on the individuals that use this platform.</div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">Best! Integral Sequencing Team</div>
+  
+  <form id="searchForm" style="margin-top: 20px;">
+    <div class="input_wrapper">
+      <div class="input_box" style="width: 100%; background-color: rgb(64, 65, 79); border-radius: 7px; display: flex; flex-direction: row; align-items: center; padding: 10px 5px;">
+        <div contenteditable="true" style="width: 97%; min-height: 26px; outline: none; border: none; background-color: rgb(64, 65, 79); color: white; padding-left: 8px; font-size: 16px; max-height: 150px; overflow-y: auto; padding-right: 30px;"></div>
+        ,
+        <button class="search-button" style="margin-right: 20px; background-color: transparent; outline: none; border: none; color: white; cursor: pointer; padding: 5px; border-radius: 15%; display: flex; align-items: center; justify-content: center; width: 35px; height: 35px;">
+          <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 30 30" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 mr-1" height="4em" width="4em" xmlns="http://www.w3.org/2000/svg">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <form id="runLightdock">
+    <button class="button-84" role="button">Run Docking Simulation</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="fileContent" style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;"></div>
+
+  <script>
+    
+    async function fetchFileContent() {
+      try {
+        const response = await fetch('http://localhost:5001/html');
+        if (response.ok) {
+          const text = await response.text();
+      
+          // Split the content at the first occurrence of "..."
+          const splitContent = text.split('...')[0] + '...';
+          
+          let message = splitContent.split('\n')[0]; 
+          document.getElementById('fileContent').innerText = message;
+	  
+          // split the file content into lines
+          const lines = text.split(/\r?\n/);
+
+          // Ensure there's at least two lines to check for a blank line
+          if (lines.length < 2) {
+            console.log("No second line or content to process.");
+          } else if (/^\s*$/.test(lines[1])) {
+            // join and log the content to the console after the blank line
+            console.log(lines.slice(2).join("\n"));
+            // display the table
+            displayTable(lines.slice(2).join("\n"))
+          } else if (!/^\s*$/.test(lines[1])) {
+           console.log("No blank line after the first line.");
+          } else {
+            console.error("Error fetching tabular data: ", response.status)
+          }
+          
+          // Send the fetched content to the backend
+          await sendFileContentToBackend();
+        } else {
+          console.error("Error fetching the file:", response.status);
+        }
+      } catch (error) {
+        console.error("Error fetching the file:", error);
+      }
+    }
+
+    async function sendFileContentToBackend() {
+      try {
+          const fileContent = document.getElementById('fileContent').innerText;
+
+          const response = await fetch('http://localhost:8000/html', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ content: fileContent }),
+          });
+
+          if (response.ok) {
+              console.log('File content sent to backend successfully');
+              const result = await response.json();
+              document.getElementById('status').innerText = result.message;
+          } else {
+              console.error('Error sending file content to backend:', response.status);
+          }
+      } catch (error) {
+          console.error('Error:', error);
+      }
+    }
+
+    function displayTable(rawData) {
+      try {
+        // Get the div where content is to be displayed
+        const fileContentDiv = document.getElementById('fileContent');
+
+        // Parse raw data into an array of objects
+        const lines = rawData.trim().split('\n'); // Split raw data into lines
+        const headers = lines[0].trim().split(/\s+/); // Extract headers (first line)
+        const data = lines.slice(1).map((line) => {
+            const values = line.trim().split(/\s+/); // Split line into values
+            const row = {};
+            headers.forEach((header, index) => {
+                row[header] = values[index] || ''; // Map headers to values
+            });
+            return row;
+        });
+
+        // Validate if data is parsed correctly
+        if (data.length === 0) {
+          const fileContentDiv = document.getElementById('fileContent');
+        }
+
+        // Create a table element
+        const table = document.createElement('table');
+        table.style.borderCollapse = 'collapse';
+        table.style.width = '100%';
+        table.style.color = 'white';
+        table.style.backgroundColor = '#3e3e3e';
+
+        // Add table headers
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headers.forEach((key) => {
+            const th = document.createElement('th');
+            th.textContent = key;
+            th.style.border = '1px solid #ddd';
+            th.style.padding = '8px';
+            th.style.textAlign = 'left';
+            th.style.backgroundColor = '#555';
+            th.style.color = 'white';
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Add table rows
+        const tbody = document.createElement('tbody');
+        data.forEach((row) => {
+            const tr = document.createElement('tr');
+            headers.forEach((key) => {
+                const td = document.createElement('td');
+                td.textContent = row[key];
+                td.style.border = '1px solid #ddd';
+                td.style.padding = '8px';
+                td.style.textAlign = 'left';
+                td.style.color = 'white';
+                td.style.backgroundColor = '#464646';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        // Append the table to the fileContentDiv
+        fileContentDiv.appendChild(table);
+        } catch (error) {
+            // Display error message
+            const fileContentDiv = document.getElementById('fileContent');
+            fileContentDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        }
+      }
+
+    // Check for file updates and fetch content every 5 seconds
+    setInterval(fetchFileContent, 5001);
+  </script>
+</body>
+</html>

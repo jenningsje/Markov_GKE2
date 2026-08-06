@@ -1,0 +1,52 @@
+# Stage 1: Python builder
+FROM python:3.14-alpine
+
+WORKDIR /tmp
+
+WORKDIR /opt/app
+
+COPY requirements.txt /tmp/requirements.txt
+
+WORKDIR /opt/app
+
+RUN apk update && \
+    xargs apk add --no-cache < /tmp/requirements.txt && \
+    rm /tmp/requirements.txt
+    
+WORKDIR /etc/nginx
+
+COPY ./html /etc/nginx/html
+
+# Set the working directory
+WORKDIR /opt/app
+
+# Copy the application files into the container
+COPY ./Markov .
+
+WORKDIR /opt/app/MarkovProprietary
+
+# Set path variables
+ENV PYTHONPATH=""
+ENV MARKOV_HOME=/opt/app/MarkovProprietary/pipelinestages
+ENV LIGHTDOCK_HOME=/opt/app/lightdock
+ENV GEMMI_HOME=/opt/app/gemmi
+ENV PATH=$PATH:$LIGHTDOCK_HOME/bin:$MARKOV_HOME/bin:$GEMMI_HOME/bin
+ENV PYTHONPATH=$PYTHONPATH:$LIGHTDOCK_HOME:$MARKOV_HOME:$GEMMI_HOME
+
+WORKDIR /opt/app/./lightdock
+
+# Create necessary directories
+RUN mkdir -p /opt/app/lightdock/mount/input && \
+    touch /opt/app/lightdock/mount/input/message.txt
+
+# Unzip files
+RUN cd ../MarkovProprietary/pipelinestages/make_tables/python && python unzip.py
+
+# Copy supervisord.conf into the container
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN pip install numpy pandas
+
+EXPOSE 8888 4000 8000 0000
+
+CMD ["/bin/bash"]

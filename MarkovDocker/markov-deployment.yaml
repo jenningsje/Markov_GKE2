@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: markov
+  labels:
+    io.kompose.service: markov
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      io.kompose.service: markov
+
+  template:
+    metadata:
+      labels:
+        io.kompose.service: markov
+
+    spec:
+      # --- ADD THIS SECTION TO TARGET ARM64 NODES ---
+      nodeSelector:
+        workload: markov
+        kubernetes.io/arch: amd64
+      # ---------------------------------------------
+
+      initContainers:
+      - name: populate-markov-volume
+        image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:v8
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Checking Markov PVC..."
+
+          if [ ! -f /mnt/receive_signal.py ]; then
+            echo "PVC empty - copying files..."
+            cp -a /opt/app/MarkovProprietary/pipelinestages/app/mount/. /mnt/
+          else
+            echo "PVC already populated"
+          fi
+
+          echo "PVC contents:"
+          ls -la /mnt
+
+        volumeMounts:
+        - name: markov-app-storage
+          mountPath: /mnt
+
+
+      containers:
+      - name: markov
+        image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:v4
+
+        env:
+        - name: JWT_SECRET
+          value: d3bbfd8f0662c7dc7b48786722ce7aaa8e658ed4628f767ee448a8fab8e3bf61a9fb8fad863fec7476d51fc7822933d0d356812a41f71371f55bfc628050d84f
+
+        ports:
+        - containerPort: 4000
+          protocol: TCP
+
+        resources:
+          limits:
+            cpu: "4"
+            memory: "12Gi"
+          requests:
+            cpu: "4"
+            memory: "12Gi"
+
+        volumeMounts:
+        - name: markov-app-storage
+          mountPath: /opt/app/MarkovProprietary/pipelinestages/app/mount
+
+        stdin: true
+        tty: true
+
+
+      volumes:
+      - name: markov-app-storage
+        persistentVolumeClaim:
+          claimName: markov-app
+
+      restartPolicy: Always

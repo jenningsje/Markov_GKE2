@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  JWT_SECRET: d3bbfd8f0662c7dc7b48786722ce7aaa8e658ed4628f767ee448a8fab8e3bf61a9fb8fad863fec7476d51fc7822933d0d356812a41f71371f55bfc628050d84f
+  OLLAMA_MODEL: granite3.1-dense
+  OLLAMA_SERVER_URL: http://34.172.30.27:11434
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: codel-MarkovASI-MarkovASIopen--env
+  name: markovasi-markovasiopen--env

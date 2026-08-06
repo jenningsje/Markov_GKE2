@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.38.0 (HEAD)
+  labels:
+    io.kompose.service: simulator
+  name: simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: simulator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.38.0 (HEAD)
+      labels:
+        io.kompose.service: simulator
+    spec:
+      containers:
+        - env:
+            - name: JWT_SECRET
+              value: d3bbfd8f0662c7dc7b48786722ce7aaa8e658ed4628f767ee448a8fab8e3bf61a9fb8fad863fec7476d51fc7822933d0d356812a41f71371f55bfc628050d84f
+          image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/simulator_app
+          name: simulator
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "250m"
+              memory: "1Gi"
+            requests:
+              cpu: "250m"
+              memory: "1Gi"
+          volumeMounts:
+            - mountPath: /etc/nginx/html
+              name: simulator-cm0
+            - mountPath: /var/run/docker.sock
+              name: docker-sock
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: simulator-cm0
+          name: simulator-cm0
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket

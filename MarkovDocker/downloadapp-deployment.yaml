@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: downloadapp
+  name: downloadapp
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      io.kompose.service: downloadapp
+
+  template:
+    metadata:
+      labels:
+        io.kompose.service: downloadapp
+
+    spec:
+      containers:
+        - name: downloadapp
+          image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/downloadapp:v7
+
+          ports:
+            - containerPort: 80
+
+          env:
+            - name: JWT_SECRET
+              value: d3bbfd8f0662c7dc7b48786722ce7aaa8e658ed4628f767ee448a8fab8e3bf61a9fb8fad863fec7476d51fc7822933d0d356812a41f71371f55bfc628050d84f
+
+          volumeMounts:
+            - name: markov-app
+              mountPath: /opt/app/MarkovProprietary/pipelinestages/app/mount
+
+      volumes:
+        - name: markov-app
+          persistentVolumeClaim:
+            claimName: markov-app
+
+      restartPolicy: Always

@@ -1,0 +1,3 @@
+[submodule "MarkovDocker5"]
+    path = MarkovDocker5
+    url = https://github.com/jenningsje/MarkovDocker5.git

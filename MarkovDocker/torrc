@@ -1,0 +1,2 @@
+HiddenServiceDir /var/lib/tor/Markov_login 
+HiddenServicePort 1112 127.0.0.1:1112

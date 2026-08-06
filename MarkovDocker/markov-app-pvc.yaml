@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: markov-app
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: filestore-rwx
+  resources:
+    requests:
+      storage: 12Gi

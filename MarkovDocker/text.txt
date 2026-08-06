@@ -1,0 +1,5 @@
+(async () => {
+  const newPassword = "JOnionoIOBOI309%#$";  // choose a known password
+  const hash = await bcrypt.hash(newPassword, 10);
+  console.log(hash);
+})();

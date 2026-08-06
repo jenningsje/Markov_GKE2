@@ -1,0 +1,74 @@
+# Stage 1: Python builder
+FROM python:3.9-alpine
+
+WORKDIR /tmp
+
+WORKDIR /opt/app
+
+COPY requirements.txt /tmp/requirements.txt
+
+WORKDIR /opt/app/./lightdock
+
+WORKDIR /opt/app
+
+RUN apk update && \
+    xargs apk add --no-cache < /tmp/requirements.txt && \
+    rm /tmp/requirements.txt
+
+RUN mkdir -p /run/sshd && \
+    ssh-keygen -A
+
+WORKDIR /etc/nginx
+
+COPY ./html /etc/nginx/html
+
+# Set the working directory
+WORKDIR /opt/app
+
+# Copy the application files into the container
+COPY ./Markov .
+
+WORKDIR /opt/app/./MarkovProprietary/pipelinestages/app/mount
+
+COPY package.json yarn.lock ./
+
+RUN yarn install --frozen-lockfile --production
+
+WORKDIR /opt/app/MarkovProprietary
+
+# Set path variables
+ENV PYTHONPATH=""
+ENV MARKOV_HOME=/opt/app/MarkovProprietary/pipelinestages
+ENV LIGHTDOCK_HOME=/opt/app/lightdock
+ENV GEMMI_HOME=/opt/app/gemmi
+ENV PATH=$PATH:$LIGHTDOCK_HOME/bin:$MARKOV_HOME/bin:$GEMMI_HOME/bin
+ENV PYTHONPATH=$PYTHONPATH:$LIGHTDOCK_HOME:$MARKOV_HOME:$GEMMI_HOME
+ENV PATH=$PATH:/root/go/bin
+
+WORKDIR /opt/app/./lightdock
+
+# Create necessary directories
+RUN mkdir -p /opt/app/lightdock/mount/input && \
+    touch /opt/app/lightdock/mount/input/message.txt
+
+# Set execution permissions for scripts
+RUN chmod u+x run_server_one.sh run_lightdock.sh run_server_two.sh renew.sh
+
+# Unzip files
+RUN cd ../MarkovProprietary/pipelinestages/make_tables/python && python unzip.py
+
+# Copy supervisord.conf into the container
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN python -m venv venv && \
+    source /opt/app/lightdock/venv/bin/activate && \
+    /opt/app/lightdock/venv/bin/pip install --upgrade pip setuptools wheel && \
+    /opt/app/lightdock/venv/bin/pip install -e . cython pyparsing==2.4.7 \
+    requests pandas openpyxl jinja2 markupsafe gunicorn && \
+    ./secure_biopython.sh
+
+COPY ./pkg_resources /opt/app/lightdock/venv/lib/python3.9/site-packages/pkg_resources
+
+EXPOSE 8888 4000 8000 0000
+
+CMD ["/bin/sh", "./run_lightdock.sh"]

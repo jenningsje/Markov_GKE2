@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.38.0 (HEAD)
+  labels:
+    io.kompose.service: codel
+  name: codel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: codel
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.38.0 (HEAD)
+      labels:
+        io.kompose.service: codel
+    spec:
+      containers:
+        - envFrom:
+            - configMapRef:
+                name: markovasi-markovasiopen--env
+          image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/codel
+          name: codel
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+      restartPolicy: Always

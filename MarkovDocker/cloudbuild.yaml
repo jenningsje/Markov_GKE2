@@ -1,0 +1,153 @@
+steps:
+# simulatorapp
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '-f'
+    - 'Dockerfile.simulator'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/simulator-app-repo/simulatorapp:latest'
+    - '.'
+
+# nodeapp
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '-f'
+    - 'Dockerfile.node'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/node-app-repo/nodeapp:latest'
+    - '.'
+
+# downloadapp
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '-f'
+    - 'Dockerfile.download'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/download-app-repo/downloadapp:latest'
+    - '.'
+
+# flaskapp
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '-f'
+    - 'Dockerfile.flask'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/flask-app-repo/flaskapp:latest'
+    - '.'
+
+# healthapp
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '-f'
+    - 'Dockerfile.health'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/health-app-repo/healthapp:latest'
+    - '.'
+
+# backend
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'build'
+    - '-f'
+    - 'Dockerfile.backend'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/backend/backend:latest'
+    - '../login/backend'
+  
+
+# apps
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'build'
+    - '-f'
+    - 'Dockerfile.apps'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/apps/apps:latest'
+    - '../login/apps'
+  
+
+# login
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'build'
+    - '-f'
+    - 'Dockerfile.login'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/login-app-repo/login:latest'
+    - '../login/login'
+  
+
+# viewer
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    -'build'
+    - '-f'
+    - 'Dockerfile'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/viewer-app-repo/viewer:latest'
+    '../Markov-Viewer'
+  
+
+# codel
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'build'
+    - '-f'
+    - 'Dockerfile'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/codel/codel:latest'
+    - '../MarkovASI/MarkovASIopen'
+  
+
+# db
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'build'
+    - '-f'
+    - 'Dockerfile.postgres'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/db/db:latest'
+    - '../login/db'
+  
+
+# sshserver
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'build'
+    - '-f'
+    - 'Dockerfile.ssh'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/ssh-server-repo/ssh-server:latest'
+    - '.'
+  
+
+# gateway
+- name: 'gcr.io/cloud-builders/docker'
+  args: 
+    - 'build'
+    - '-f'
+    - 'Dockerfile.gateway'
+    - '-t'
+    - 'us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/gateway/gateway:latest'
+    - '../login/gateway'
+  
+
+images:
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/simulator-app-repo/simulator-app:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/node-app-repo/nodeapp:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/download-app-repo/downloadapp:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/flask-app-repo/flaskapp:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/health-app-repo/healthapp:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/backend/backend:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/apps/apps:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/login-app-repo/login:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/viewer-app-repo/viewer:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/codel/codel:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/db/db:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/ssh-server-repo/ssh-server:latest
+- us-docker.pkg.dev/project-05da6024-aca6-464e-bd3/gateway/gateway:latest

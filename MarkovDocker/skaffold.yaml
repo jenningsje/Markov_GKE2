@@ -1,0 +1,133 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: markovdocker
+
+build:
+  local:
+    useDockerCLI: true
+    push: true
+
+  artifacts:
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/apps
+      context: ../login/apps
+      docker:
+        dockerfile: Dockerfile.apps
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/backend
+      context: ../login/backend
+      docker:
+        dockerfile: Dockerfile.backend
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/codel
+      context: ../MarkovASI/MarkovASIopen
+      docker:
+        dockerfile: Dockerfile
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/db
+      context: ../login/db
+      docker:
+        dockerfile: Dockerfile.postgres
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/download_app
+      context: .
+      docker:
+        dockerfile: Dockerfile.download
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/flask_app
+      context: .
+      docker:
+        dockerfile: Dockerfile.flask
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/gateway
+      context: ../login/gateway
+      docker:
+        dockerfile: Dockerfile.gateway
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/health_app
+      context: .
+      docker:
+        dockerfile: Dockerfile.health
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock
+      context: .
+      docker:
+        dockerfile: Dockerfile.Markov
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/login
+      context: ../login/login
+      docker:
+        dockerfile: Dockerfile.login
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/node_app
+      context: .
+      docker:
+        dockerfile: Dockerfile.node
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/simulator_app
+      context: .
+      docker:
+        dockerfile: Dockerfile.simulator
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/ssh-server
+      context: .
+      docker:
+        dockerfile: Dockerfile.ssh
+
+    - image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/viewer
+      context: ../Markov-Viewer
+      docker:
+        dockerfile: Dockerfile
+
+manifests:
+  rawYaml:
+    # ❌ REMOVED (missing file was breaking everything)
+    # - markovasi-env-configmap.yaml
+
+    - apps-deployment.yaml
+    - apps-service.yaml
+    - backend-deployment.yaml
+    - backend-service.yaml
+    - codel-deployment.yaml
+    - codel-service.yaml
+    - db-deployment.yaml
+    - db-service.yaml
+
+    - download-app-deployment.yaml
+    - download_app-service.yaml
+
+    - flask-app-deployment.yaml
+    - flask_app-service.yaml
+
+    - gateway-deployment.yaml
+    - gateway-service.yaml
+
+    - health-app-cm2-configmap.yaml
+    - health-app-cm3-configmap.yaml
+    - health-app-deployment.yaml
+    - health_app-service.yaml
+
+    - login-deployment.yaml
+    - login-service.yaml
+
+    - markov-app-persistentvolumeclaim.yaml
+    - markov-deployment.yaml
+    - markov-service.yaml
+
+    - node-app-deployment.yaml
+    - node_app-service.yaml
+
+    - pgdata-persistentvolumeclaim.yaml
+
+    - simulator-cm0-configmap.yaml
+    - simulator-deployment.yaml
+    - simulator-service.yaml
+
+    - ssh-data-persistentvolumeclaim.yaml
+    - ssh-server-deployment.yaml
+    - ssh-server-service.yaml
+
+    - tor-keys-persistentvolumeclaim.yaml
+
+    - viewer-deployment.yaml
+    - viewer-service.yaml

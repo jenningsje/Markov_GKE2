@@ -1,0 +1,2 @@
+# constraints.txt
+biopython==0  # impossible version, pip will skip it

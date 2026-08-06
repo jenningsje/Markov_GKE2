@@ -1,0 +1,1 @@
+curl http://ftp.ebi.ac.uk/pub/databases/alphafold/accession_ids.txt -o accession_ids.txt

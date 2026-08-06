@@ -1,0 +1,3 @@
+Beta-sheet cyclic peptide
+Cytokine
+The proteins above run a very fast simulation and there will be others that do so as well

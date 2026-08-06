@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codel
+  template:
+    metadata:
+      labels:
+        app: codel
+    spec:
+      containers:
+        - name: codel
+          image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/codel:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: BACKEND_URL
+              value: "http://backend:1114"
+            - name: OLLAMA_URL
+              value: "http://34.172.30.27:11434"

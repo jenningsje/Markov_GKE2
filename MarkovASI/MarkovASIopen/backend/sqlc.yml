@@ -1,0 +1,14 @@
+version: "2"
+cloud:
+sql:
+  - engine: "sqlite"
+    queries:
+      - "models/*.sql"
+    schema: "./migrations"
+    gen:
+      go:
+        package: "database"
+        out: "database"
+    database:
+      uri: ${DATABASE_URL}
+

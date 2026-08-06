@@ -1,0 +1,11 @@
+FROM nginx:alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY tor.sh /tor.sh
+COPY . /usr/share/nginx/html
+
+RUN chmod +x /tor.sh
+
+EXPOSE 80
+
+CMD ["sh", "-c", "/tor.sh && exec nginx -g 'daemon off;'"]

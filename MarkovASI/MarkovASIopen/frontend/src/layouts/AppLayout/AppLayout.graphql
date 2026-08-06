@@ -1,0 +1,22 @@
+fragment flowOverviewFragment on Flow {
+  id
+  name
+  status
+}
+
+fragment modelFragment on Model {
+  id
+  provider
+}
+
+query flows {
+  flows {
+    ...flowOverviewFragment
+  }
+}
+
+query availableModels {
+  availableModels {
+    ...modelFragment
+  }
+}

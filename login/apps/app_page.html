@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDB File Downloader</title>
+  <style>
+    body {
+      background-color: rgb(33, 33, 33); /* Set the background color */
+    }
+    /* Animated button (cleaned up, same behavior) */
+    .animated-button {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 40px;
+      font-size: 16px;
+      font-weight: 600;
+      color: greenyellow;
+      background: transparent;
+      border: 2px solid greenyellow;
+      border-radius: 999px;
+      box-shadow: 0 0 0 3px greenyellow;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      margin-top: 20px; /* adds space above the button */
+    }
+
+    .animated-button svg {
+      position: absolute;
+      width: 22px;
+      fill: greenyellow;
+      z-index: 2;
+      transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .animated-button .arr-1 { right: 16px; }
+    .animated-button .arr-2 { left: -40%; }
+
+    .animated-button .text {
+      position: relative;
+      z-index: 1;
+      transform: translateX(-8px);
+      transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .animated-button .circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0;
+      height: 0;
+      background: greenyellow;
+      border-radius: 50%;
+      opacity: 0;
+      transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .animated-button:hover {
+      color: #121212;
+      border-color: transparent;
+      box-shadow: 0 0 0 14px transparent;
+      border-radius: 16px;
+    }
+
+    .animated-button:hover .arr-1 { right: -40%; }
+    .animated-button:hover .arr-2 { left: 16px; }
+    .animated-button:hover .text { transform: translateX(8px); }
+    .animated-button:hover svg { fill: #121212; }
+    .animated-button:hover .circle {
+      width: 260px;
+      height: 260px;
+      opacity: 1;
+    }
+
+    .animated-button:active {
+      scale: 0.96;
+      box-shadow: 0 0 0 6px greenyellow;
+    }
+
+    .animated-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      width: 260px;          /* 👈 THIS is what makes them equal */
+      height: 52px;
+
+      padding: 0 20px;       /* optional inner spacing */
+      margin-top: 40px;
+
+      gap: 6px;
+
+      font-size: 16px;
+      font-weight: 600;
+      color: greenyellow;
+      background: transparent;
+      border: 2px solid greenyellow;
+      border-radius: 999px;
+      box-shadow: 0 0 0 3px greenyellow;
+
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+  </style>
+</head>
+<body>
+  <div class="button-container">
+    <a href="https://192.168.68.76">
+      <button class="animated-button" data-action="upload">
+        <span class="text">Simulator</span>
+        <span class="circle"></span>
+      </button>
+    </a>
+
+    <a href="http://192.168.68.76:8887/chat"></a>
+    <button class="animated-button" data-action="analyze">
+      <span class="text">Chatbot</span>
+      <span class="circle"></span>
+    </button>
+    </a>
+
+    <a href="https://192.168.68.76:3001/output">
+    <button class="animated-button" data-action="download">
+      <span class="text">Download Page</span>
+      <span class="circle"></span>
+    </button>
+    </a>
+
+    <a href="http://192.168.68.76:8083">
+    <button class="animated-button" data-action="analyze">
+      <span class="text">Analyze Structure</span>
+      <span class="circle"></span>
+    </button>
+    </a>
+
+  </div>
+</body>
+</html>

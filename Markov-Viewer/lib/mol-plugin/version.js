@@ -1,0 +1,2 @@
+export var PLUGIN_VERSION = '5.5.0';
+export var PLUGIN_VERSION_DATE = new Date(1768105124078)

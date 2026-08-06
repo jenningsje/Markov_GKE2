@@ -1,0 +1,89 @@
+scalar JSON
+scalar Uint
+scalar Time
+
+enum TaskType {
+  input
+  terminal
+  browser
+  code
+  ask
+  done
+}
+
+enum TaskStatus {
+  inProgress
+  finished
+  stopped
+  failed
+}
+
+type Task {
+  id: Uint!
+  message: String!
+  createdAt: Time!
+  type: TaskType!
+  status: TaskStatus!
+  args: JSON!
+  results: JSON!
+}
+
+enum FlowStatus {
+  inProgress
+  finished
+}
+
+type Log {
+  id: Uint!
+  text: String!
+}
+
+type Terminal {
+  containerName: String!
+  connected: Boolean!
+  logs: [Log!]!
+}
+
+type Browser {
+  url: String!
+  screenshotUrl: String!
+}
+
+type Model {
+  provider: String!
+  id: String!
+}
+
+type Flow {
+  id: Uint!
+  name: String!
+  tasks: [Task!]!
+  terminal: Terminal!
+  browser: Browser!
+  status: FlowStatus!
+  model: Model!
+}
+
+type Query {
+  availableModels: [Model!]!
+  flows: [Flow!]!
+  flow(id: Uint!): Flow!
+}
+
+type Mutation {
+  createFlow(modelProvider: String!, modelId: String!): Flow!
+  createTask(flowId: Uint!, query: String!): Task!
+  finishFlow(flowId: Uint!): Flow!
+
+  # Use only for development purposes
+  _exec(containerId: String!, command: String!): String!
+}
+
+type Subscription {
+  taskAdded(flowId: Uint!): Task!
+  taskUpdated: Task!
+  flowUpdated(flowId: Uint!): Flow!
+
+  browserUpdated(flowId: Uint!): Browser!
+  terminalLogsAdded(flowId: Uint!): Log!
+}

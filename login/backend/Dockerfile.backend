@@ -1,0 +1,19 @@
+FROM node:26-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache openssh postgresql-client \
+    && ssh-keygen -A
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+COPY start.sh .
+RUN chmod +x start.sh
+
+EXPOSE 1114
+EXPOSE 22
+
+CMD ["./start.sh"]

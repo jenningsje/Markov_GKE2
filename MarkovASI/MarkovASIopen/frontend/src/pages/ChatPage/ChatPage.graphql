@@ -1,0 +1,96 @@
+fragment taskFragment on Task {
+  id
+  type
+  message
+  status
+  args
+  results
+  createdAt
+}
+
+fragment logFragment on Log {
+  text
+  id
+}
+
+fragment browserFragment on Browser {
+  url
+  screenshotUrl
+}
+
+fragment flowFragment on Flow {
+  id
+  name
+  status
+  model {
+    ...modelFragment
+  }
+  terminal {
+    containerName
+    connected
+    logs {
+      ...logFragment
+    }
+  }
+  browser {
+    ...browserFragment
+  }
+  tasks {
+    ...taskFragment
+  }
+}
+
+query flow($id: Uint!) {
+  flow(id: $id) {
+    ...flowFragment
+  }
+}
+
+mutation createFlow($modelProvider: String!, $modelId: String!) {
+  createFlow(modelProvider: $modelProvider, modelId: $modelId) {
+    id
+    name
+  }
+}
+
+mutation createTask($flowId: Uint!, $query: String!) {
+  createTask(flowId: $flowId, query: $query) {
+    ...taskFragment
+  }
+}
+
+mutation finishFlow($flowId: Uint!) {
+  finishFlow(flowId: $flowId) {
+    id
+    status
+  }
+}
+
+subscription taskAdded($flowId: Uint!) {
+  taskAdded(flowId: $flowId) {
+    ...taskFragment
+  }
+}
+
+subscription terminalLogsAdded($flowId: Uint!) {
+  terminalLogsAdded(flowId: $flowId) {
+    ...logFragment
+  }
+}
+
+subscription flowUpdated($flowId: Uint!) {
+  flowUpdated(flowId: $flowId) {
+    id
+    name
+    terminal {
+      containerName
+      connected
+    }
+  }
+}
+
+subscription browserUpdated($flowId: Uint!) {
+  browserUpdated(flowId: $flowId) {
+    ...browserFragment
+  }
+}

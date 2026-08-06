@@ -1,0 +1,39 @@
+services:
+  db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile.postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  login:
+    build:
+      context: ./login
+      dockerfile: Dockerfile.login
+    ports:
+      - "1112:80"
+    depends_on:
+      - db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    ports:
+      - "1114:1114"
+
+  apps:
+    build:
+      context: ./apps
+      dockerfile: Dockerfile.apps
+    ports:
+      - "1113:80"
+
+volumes:
+  pgdata:

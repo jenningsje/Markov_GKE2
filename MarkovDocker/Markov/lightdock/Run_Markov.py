@@ -61,7 +61,7 @@ def Markov():
                 with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/message.txt", "w") as message:
                     message.write("fetch the next two proteins...")
                     logger.info("fetch the next two proteins...")
-                    time.sleep(5) 
+                    time.sleep(1) 
 
             # retrieve the size of file
             open("names.txt", "w")
@@ -74,7 +74,7 @@ def Markov():
                 names_lines = names.readlines()
                 file_size = os.path.getsize("names.txt")
                 logger.info("no user input")
-                time.sleep(5)
+                time.sleep(1)
 
             # fetch user input
             names = open("names.txt")
@@ -92,7 +92,7 @@ def Markov():
 
             while os.path.getsize("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt") == 0:
                 logger.info(os.path.getsize("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt"))
-                time.sleep(5)
+                time.sleep(1)
 
             # fetch the current signal from the front end
             from_front_end = open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt")
@@ -109,7 +109,7 @@ def Markov():
                 first_front_end_line = from_front_end_lines[0].split('\n')[0].strip()
                 val = first_front_end_line == from_pdb
                 logger.info(val)
-                time.sleep(5)
+                time.sleep(1)
 
                 # delete names.txt file if present
                 if os.path.isfile("names.txt"):
@@ -134,14 +134,14 @@ def Markov():
                         names_lines = names.readlines()
                         file_size = os.path.getsize("names.txt")
                         logger.info("no user input")
-                        time.sleep(5)
+                        time.sleep(1)
 
                     # fetch user input
                     names = open("names.txt")
                     names_lines = names.readlines()
                     logger.info(names_lines[0])
                     fetch_protein(names_lines[0], "/opt/app/lightdock/prot1.pdb")
-                time.sleep(5) 
+                time.sleep(1) 
 
             with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt"):
                 pass
@@ -150,7 +150,7 @@ def Markov():
             with open("names.txt", "a+") as names:
                 # read the lines of names.txt
                 names_lines = names.readlines()
-                time.sleep(5) 
+                time.sleep(1) 
             
             # check the size of the file again
             new_file_size = os.path.getsize("names.txt")
@@ -159,7 +159,7 @@ def Markov():
             with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/message.txt", "w") as message:
                 message.write("fetch the next protein...")
                 logger.info("fetch the next protein...")
-                time.sleep(5) 
+                time.sleep(1) 
 
             # while the size of the file is zero wait for user input
             while (new_file_size == 0):
@@ -168,7 +168,7 @@ def Markov():
                 names_lines = names.readlines()
                 new_file_size = os.path.getsize("names.txt")
                 logger.info("no user input")
-                time.sleep(5)
+                time.sleep(1)
 
             # fetch user input
             names = open("names.txt")
@@ -190,7 +190,7 @@ def Markov():
 
             while len(first_front_end_line) == 0:
                 logger.info("test")
-                time.sleep(5) 
+                time.sleep(1) 
 
                 # delete names.txt file if present
                 if os.path.isfile("names.txt"):
@@ -204,7 +204,7 @@ def Markov():
                     with open("names.txt", "a+") as names:
                         # read the lines of names.txt
                         names_lines = names.readlines()
-                        time.sleep(5)
+                        time.sleep(1)
 
                     # get the size of the names.txt file
                     file_size = os.path.getsize("names.txt")
@@ -216,7 +216,7 @@ def Markov():
                         names_lines = names.readlines()
                         file_size = os.path.getsize("names.txt")
                         logger.info("no user input")
-                        time.sleep(5)
+                        time.sleep(1)
 
                     # fetch user input
                     names = open("names.txt")
@@ -224,32 +224,33 @@ def Markov():
                     logger.info(names_lines[0])
                     fetch_protein(names_lines[0], "/opt/app/lightdock/prot2.pdb")
 
-                time.sleep(5) 
+                time.sleep(1) 
 
             with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/message.txt", "w") as message:
                 message.write("docking simulator ready...")
                 logger.info("docking simulator ready...")
-                time.sleep(5) 
+                time.sleep(1) 
 
             os.chdir("/opt/app/lightdock")
-            time.sleep(5)
+            time.sleep(1)
             
             while not os.path.isfile("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/ping.json"):
-                time.sleep(5)
+                time.sleep(1)
 
             simulator()
+            cleanup_lightdock()
 
             try:
                 os.makedirs("swarm_0", exist_ok=True)
             except Exception as e:
                 # Log the exception and continue the loop
                 logger.error(f"Error occurred: {e}", exc_info=True)
-                time.sleep(5)
+                time.sleep(1)
 
         except Exception as e:
             # Log the exception and continue the loop
             logger.error(f"Error occurred: {e}", exc_info=True)
-            time.sleep(5)
+            time.sleep(1)
 
 if __name__ == "__main__":
     Markov()

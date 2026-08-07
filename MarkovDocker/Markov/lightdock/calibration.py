@@ -72,14 +72,14 @@ def fetch_input(message):
 	with open(message_path, "r+") as m:
 		m.write(message)
 		logging.info(message)
-		time.sleep(5)
+		time.sleep(1)
 
 	print("test2")
 	# tell the user to specify the number of steps, cores or glowworms and attempt to fetch the user input if it is not a number between 1 and 4
 	with open(message_path, "r+") as m:
 		m.write(message)
 		print(message)
-		time.sleep(5)
+		time.sleep(1)
 	
 	with open(from_front_end_path) as from_front_end:
 		from_front_end_lines = from_front_end.readlines()
@@ -104,7 +104,7 @@ def fetch_input(message):
 		pass
 
 	while len(from_front_end_lines) == 0:
-		time.sleep(5)
+		time.sleep(1)
 
 	os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/input")
 	logging.info(f"the lines from the front end are: {from_front_end_lines}")
@@ -113,7 +113,7 @@ def fetch_input(message):
 	logging.info(f"test the logic statement: {from_front_end_lines[0] != message}")
 
 	while (from_front_end_lines[0] != message or len(from_front_end_lines) == 0):
-		time.sleep(5)
+		time.sleep(1)
 		logging.info(from_front_end_lines[0])
 		os.chdir("/opt/app/lightdock")
 		logging.info("waiting for signal from front end...")
@@ -157,7 +157,7 @@ def fetch_input(message):
 		input_lines = input.readlines()
 		input_size = os.path.getsize(input_path)
 		logging.info("no user input 1")
-		time.sleep(5)
+		time.sleep(1)
 	
 	with open(input_path, "w") as f3:
 		pass
@@ -177,7 +177,7 @@ def calibrate_simulation(message, message_path, acceptable_params):
 		logging.info("acceptable_params" + str(acceptable_params))
 		with open(message_path, "r+") as m:
 			m.write("calibration failed, please try again")
-			time.sleep(5)
+			time.sleep(1)
 
 			# attempt to recalibrate the simulation
 			params = fetch_input(message)
@@ -188,7 +188,7 @@ def calibrate_simulation(message, message_path, acceptable_params):
 	with open(message_path, "r+") as m:
 		m.write("calibrated...")
 		logging.info("calibrated...")
-		time.sleep(5)
+		time.sleep(1)
 
 	calibrated_params = params[0].strip('"\n')
 	

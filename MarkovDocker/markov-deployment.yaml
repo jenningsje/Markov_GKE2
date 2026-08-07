@@ -48,7 +48,7 @@ spec:
           ls -la /mnt
 
         volumeMounts:
-        - name: markov-app-storage
+        - name: markov-app
           mountPath: /mnt
 
 
@@ -73,7 +73,7 @@ spec:
             memory: "12Gi"
 
         volumeMounts:
-        - name: markov-app-storage
+        - name: markov-app
           mountPath: /opt/app/MarkovProprietary/pipelinestages/app/mount
 
         stdin: true
@@ -81,7 +81,7 @@ spec:
 
 
       volumes:
-      - name: markov-app-storage
+      - name: markov-app
         persistentVolumeClaim:
           claimName: markov-app
 

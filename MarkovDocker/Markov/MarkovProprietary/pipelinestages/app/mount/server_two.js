@@ -135,12 +135,6 @@ app.get(['/download', '/download/'], authenticateToken, (req, res) => {
 
   const fileStream = fs.createReadStream(pdb_path);
   fileStream.pipe(res);
-
-  fileStream.on('close', () => {
-    fs.unlink(pdb_path, (err) => {
-      if (err) console.error(err);
-    });
-  });
 });
 
 

@@ -20,21 +20,38 @@ spec:
       labels:
         io.kompose.service: codel
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: codel-gpu-pool
+        kubernetes.io/arch: amd64
+
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+
       containers:
         - envFrom:
             - configMapRef:
                 name: markovasi-markovasiopen--env
           image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/codel
           name: codel
+
           ports:
             - containerPort: 8080
               protocol: TCP
+
           volumeMounts:
             - name: docker-sock
               mountPath: /var/run/docker.sock
+
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+
       volumes:
         - name: docker-sock
           hostPath:
             path: /var/run/docker.sock
             type: Socket
+
       restartPolicy: Always

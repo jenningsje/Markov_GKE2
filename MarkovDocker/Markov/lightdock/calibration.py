@@ -1,3 +1,4 @@
+from asyncio.log import logger
 import os
 import logging
 import time
@@ -28,7 +29,8 @@ acceptable_number_of_steps = range(1, 100000001)
 # fetch the user input for a specified parameter, a message and certain acceptable paramaters
 
 def cleanup_lightdock():
-    # List of files and directories to remove
+    base_dir = "/opt/app/lightdock"
+
     paths = [
         "init",
         "lightdock.egg-info",
@@ -36,25 +38,30 @@ def cleanup_lightdock():
         "lightdock_prot1_mask.npy",
         "lightdock_prot2.pdb",
         "lightdock_prot2_mask.npy",
-        "lightdock.info",  # <- Added missing comma here
+        "lightdock.info",
         "prot1.pdb",
         "prot2.pdb",
-        "swarm_0"
+        "swarm_0",
     ]
 
-    for path in paths:
+    logger.info(f"LIGHTDOCK CLEANUP: cwd={os.getcwd()}")
+
+    for name in paths:
+        path = os.path.join(base_dir, name)
+
         if os.path.exists(path):
-            if os.path.isdir(path):
-                shutil.rmtree(path)  # Remove directory
-                print(f"Deleted directory: {path}")
-            else:
-                os.remove(path)  # Remove file
-                print(f"Deleted file: {path}")
+            try:
+                if os.path.isdir(path) and not os.path.islink(path):
+                    shutil.rmtree(path)
+                    logger.info(f"Deleted directory: {path}")
+                else:
+                    os.remove(path)
+                    logger.info(f"Deleted file: {path}")
+            except Exception:
+                logger.exception(f"FAILED TO DELETE: {path}")
+                raise
         else:
-            print(f"Not found: {path}")
-
-cleanup_lightdock()
-
+            logger.info(f"Not found: {path}")
 
 def fetch_input(message):
 

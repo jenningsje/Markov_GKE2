@@ -28,8 +28,9 @@ simulation_finished = "docking simulation finished..."
 def Markov():
     while True:
 
-        try:
+        cleanup_lightdock()
 
+        try:
             logging.info(f"current directoy is: {os.getcwd()} test1")
 
             # make swarm_0 the starting directory so attempt to go into it
@@ -43,7 +44,6 @@ def Markov():
 
             # attempt to remove swarm_0
             print(f"current directory is {os.getcwd()}")
-            cleanup_lightdock()
 
             try:
                 with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt", 'w'):

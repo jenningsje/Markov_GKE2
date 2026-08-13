@@ -92,11 +92,6 @@ def simulator():
 	if not os.path.exists("generated_conformations"):
 		os.mkdir("generated_conformations")
 
-	try:
-		run_command(["rm", "-rf", "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/lightdock_0.pdb"]);
-	except:
-		logging.error("no file present in backend.")
-
 	run_command(["mv", "lightdock_0.pdb", "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/lightdock_0.pdb"])
 
 	simulation_finished = "simulation finished..."

@@ -46,6 +46,6 @@ COPY --from=fe-build /frontend/dist /fe
 
 # Install sqlite3
 
-RUN apk add --no-cache sqlite
+RUN apk add --no-cache sqlite openssh
 
 CMD /app

@@ -237,6 +237,10 @@ def Markov():
             while not os.path.isfile("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/ping.json"):
                 time.sleep(1)
 
+            try:
+                run_command(["rm", "-rf", "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/lightdock_0.pdb"]);
+            except:
+                logging.error("no file present in backend.")
             simulator()
             cleanup_lightdock()
 

@@ -81,7 +81,6 @@ def simulator():
 	# Run simulation
 	messager("running simulation...")
 	run_command(["lgd_run.py", "-s", "scoring.conf", "setup.json", steps, "-c", cores])
-	clean_directory()
 	if not os.path.exists("past_run"):
 		os.mkdir("past_run")
     
@@ -91,11 +90,6 @@ def simulator():
 	run_command(["lgd_generate_conformations.py", "/opt/app/lightdock/prot1.pdb", "/opt/app/lightdock/prot2.pdb", f"gso_0.out", "1"])
 	if not os.path.exists("generated_conformations"):
 		os.mkdir("generated_conformations")
-
-	try:
-		run_command(["rm", "-rf", "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/lightdock_0.pdb"]);
-	except:
-		logging.error("no file present in backend.")
 
 	run_command(["mv", "lightdock_0.pdb", "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/lightdock_0.pdb"])
 
@@ -122,7 +116,7 @@ def simulator():
 				logging.info("Waiting for signal from front end...")
 				
 				time.sleep(5)
-				with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt") as from_front_end:
+				with open("../../MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt") as from_front_end:
 					from_front_end_lines = from_front_end.readlines()
 				
 				val1 = from_front_end_lines and from_front_end_lines[0].strip() != simulation_finished

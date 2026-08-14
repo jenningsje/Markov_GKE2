@@ -80,11 +80,6 @@ def fetch_input(message):
 		m.write(message)
 		print(message)
 		time.sleep(1)
-	
-	with open(from_front_end_path) as from_front_end:
-		from_front_end_lines = from_front_end.readlines()
-		logging.info(f"from_front_end_lines: {from_front_end_lines}")
-	print("test3")
 
 	if os.path.exists(input_path):
 		os.remove(input_path)
@@ -103,7 +98,14 @@ def fetch_input(message):
 	with open(from_front_end_path, "w") as f1:
 		pass
 
-	while len(from_front_end_lines) == 0:
+	while True:
+		with open(from_front_end_path) as from_front_end:
+			from_front_end_lines = from_front_end.readlines()
+
+		if from_front_end_lines:
+			break
+
+		logging.info("waiting for signal from front end...")
 		time.sleep(1)
 
 	os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/input")
@@ -112,9 +114,10 @@ def fetch_input(message):
 	logging.info(f"the message is: {message}")
 	logging.info(f"test the logic statement: {from_front_end_lines[0] != message}")
 
-	while (from_front_end_lines[0] != message or len(from_front_end_lines) == 0):
+	while len(from_front_end_lines) == 0 or from_front_end_lines[0].strip() != message:
 		time.sleep(1)
-		logging.info(from_front_end_lines[0])
+		if from_front_end_lines:
+			logging.info(from_front_end_lines[0])
 		os.chdir("/opt/app/lightdock")
 		logging.info("waiting for signal from front end...")
 		from_front_end = open(from_front_end_path, "r+")

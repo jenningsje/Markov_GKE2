@@ -74,9 +74,11 @@ def simulator():
 
 	run_command(["rm", "-rf", "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/lightdock_0.pdb"])
 
+	os.chdir("/opt/app/lightdock")
+
 	# Set up simulation
 	messager("setting up simulation...")
-	run_command(["lgd_setup.py", "-s", "1", "-g", glowworms, "prot1.pdb", "prot2.pdb", "--now", "--noh"])
+	run_command(["lgd_setup.py", "-s", "1", "-g", glowworms, "/opt/app/lightdock/prot1.pdb", "/opt/app/lightdock/prot2.pdb", "--now", "--noh"])
 	if not os.path.exists("past_setup"):
 		os.mkdir("past_setup")
 

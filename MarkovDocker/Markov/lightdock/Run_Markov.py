@@ -71,6 +71,7 @@ def Markov():
             while (file_size == 0):
                 # fetch user input
                 names = open("names.txt")
+                print(os.cwd())
                 names_lines = names.readlines()
                 file_size = os.path.getsize("names.txt")
                 logger.info("no user input")
@@ -164,14 +165,14 @@ def Markov():
             # while the size of the file is zero wait for user input
             while (new_file_size == 0):
                 # fetch user input
-                names = open("names.txt")
+                names = open("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/names.txt")
                 names_lines = names.readlines()
                 new_file_size = os.path.getsize("names.txt")
                 logger.info("no user input")
                 time.sleep(1)
 
             # fetch user input
-            names = open("names.txt")
+            names = open("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/names.txt")
             names_lines = names.readlines()
             logger.info(names_lines[0])
             logger.info("end of for loop")
@@ -251,6 +252,8 @@ def Markov():
             # Log the exception and continue the loop
             logger.error(f"Error occurred: {e}", exc_info=True)
             time.sleep(1)
+
+        os.chdir('/opt/app/MarkovProprietary/pipelinestages/app/mount/input')
 
 if __name__ == "__main__":
     Markov()

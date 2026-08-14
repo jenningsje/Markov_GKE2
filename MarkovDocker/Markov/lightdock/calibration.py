@@ -108,12 +108,6 @@ def fetch_input(message):
 		logging.info("waiting for signal from front end...")
 		time.sleep(1)
 
-	os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/input")
-	logging.info(f"the lines from the front end are: {from_front_end_lines}")
-	logging.info(f"the first element is: {from_front_end_lines[0]}")
-	logging.info(f"the message is: {message}")
-	logging.info(f"test the logic statement: {from_front_end_lines[0] != message}")
-
 	while len(from_front_end_lines) == 0 or from_front_end_lines[0].strip() != message:
 		time.sleep(1)
 		if from_front_end_lines:

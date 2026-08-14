@@ -1,5 +1,5 @@
 import sys, time, logging, os
-sys.path.append('../MarkovProprietary/pipelinestages')
+sys.path.append('/opt/app/MarkovProprietary/pipelinestages')
 sys.path.append('..')
 from gemmi import *
 from fetch_from_mount import *
@@ -58,7 +58,7 @@ def Markov():
             from_front_end_size = os.path.getsize("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt")
 
             if from_front_end_size == 0:
-                with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/message.txt", "w") as message:
+                with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/message.txt", "w") as message:
                     message.write("fetch the next two proteins...")
                     logger.info("fetch the next two proteins...")
                     time.sleep(1) 
@@ -104,7 +104,7 @@ def Markov():
                 logger.info(f"first_front_end_line is: {first_front_end_line}")
                 logger.info(f"from_pdb is: {from_pdb}")
                 logger.info(f"waiting for signal from front end...")
-                from_front_end = open("../output/from_front_end.txt")
+                from_front_end = open("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt")
                 from_front_end_lines = from_front_end.readlines()
                 first_front_end_line = from_front_end_lines[0].split('\n')[0].strip()
                 val = first_front_end_line == from_pdb

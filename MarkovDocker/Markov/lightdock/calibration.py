@@ -6,15 +6,15 @@ import shutil
 
 
 # Specify the directory and file name
-input_dir = "../MarkovProprietary/pipelinestages/app/mount/input"
+input_dir = "/opt/app/MarkovProprietary/pipelinestages/app/mount/input"
 input_file = 'names.txt'
 input_path = os.path.join(input_dir, input_file)
 
 # path to message for the user
-message_path = "../MarkovProprietary/pipelinestages/app/mount/output/message.txt"
+message_path = "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/message.txt"
 
 # from_front_end_path
-from_front_end_path = "../MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt"
+from_front_end_path = "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt"
 
 # acceptable number of cores
 acceptable_number_of_cores = range(1, 5)
@@ -28,11 +28,7 @@ acceptable_number_of_steps = range(1, 100000001)
 # fetch the user input for a specified parameter, a message and certain acceptable paramaters
 
 def cleanup_lightdock():
-	os.chdir("/opt/app/lightdock")
-    print("========== CLEANUP ==========")
-    print("cwd:", os.getcwd())
-    print("script:", os.path.abspath(__file__))
-
+    # List of files and directories to remove
     paths = [
         "init",
         "lightdock.egg-info",
@@ -40,28 +36,25 @@ def cleanup_lightdock():
         "lightdock_prot1_mask.npy",
         "lightdock_prot2.pdb",
         "lightdock_prot2_mask.npy",
-        "lightdock.info",
+        "lightdock.info",  # <- Added missing comma here
         "prot1.pdb",
         "prot2.pdb",
         "swarm_0"
     ]
 
     for path in paths:
-        full_path = os.path.abspath(path)
-
-        print("CHECKING:", full_path)
-
-        if os.path.exists(full_path):
-            if os.path.isdir(full_path):
-                shutil.rmtree(full_path)
-                print("DELETED DIRECTORY:", full_path)
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                shutil.rmtree(path)  # Remove directory
+                print(f"Deleted directory: {path}")
             else:
-                os.remove(full_path)
-                print("DELETED FILE:", full_path)
+                os.remove(path)  # Remove file
+                print(f"Deleted file: {path}")
         else:
-            print("NOT FOUND:", full_path)
+            print(f"Not found: {path}")
 
-    print("========== CLEANUP DONE ==========")
+cleanup_lightdock()
+
 
 def fetch_input(message):
 
@@ -79,14 +72,14 @@ def fetch_input(message):
 	with open(message_path, "r+") as m:
 		m.write(message)
 		logging.info(message)
-		time.sleep(5)
+		time.sleep(1)
 
 	print("test2")
 	# tell the user to specify the number of steps, cores or glowworms and attempt to fetch the user input if it is not a number between 1 and 4
 	with open(message_path, "r+") as m:
 		m.write(message)
 		print(message)
-		time.sleep(5)
+		time.sleep(1)
 	
 	with open(from_front_end_path) as from_front_end:
 		from_front_end_lines = from_front_end.readlines()
@@ -113,7 +106,7 @@ def fetch_input(message):
 	while len(from_front_end_lines) == 0:
 		time.sleep(1)
 
-	os.chdir("../MarkovProprietary/pipelinestages/app/mount/input")
+	os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/input")
 	logging.info(f"the lines from the front end are: {from_front_end_lines}")
 	logging.info(f"the first element is: {from_front_end_lines[0]}")
 	logging.info(f"the message is: {message}")
@@ -122,13 +115,13 @@ def fetch_input(message):
 	while (from_front_end_lines[0] != message or len(from_front_end_lines) == 0):
 		time.sleep(1)
 		logging.info(from_front_end_lines[0])
-		os.chdir("../../../../../lightdock")
+		os.chdir("/opt/app/lightdock")
 		logging.info("waiting for signal from front end...")
 		from_front_end = open(from_front_end_path, "r+")
 		from_front_end_lines = from_front_end.readlines()
 
 	logging.info(f"current working directory is: {os.getcwd()}")
-	os.chdir("../../../../../lightdock")
+	os.chdir("/opt/app/lightdock")
 
 	# Check if the file exists
 	if not os.path.exists(input_path):

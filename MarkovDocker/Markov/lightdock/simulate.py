@@ -72,6 +72,8 @@ def simulator():
     
 	logging.info(f"the current working directory in simulate is {os.getcwd()}")
 
+	run_command(["rm", "-rf", "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/lightdock_0.pdb"])
+
 	# Set up simulation
 	messager("setting up simulation...")
 	run_command(["lgd_setup.py", "-s", "1", "-g", glowworms, "prot1.pdb", "prot2.pdb", "--now", "--noh"])

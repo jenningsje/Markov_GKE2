@@ -167,6 +167,9 @@ def calibrate_simulation(message, message_path, acceptable_params):
 
 	params = fetch_input(message)
 
+	while len(params) == 0:
+		time.sleep(1)
+
 	# runs until the number of paramters inserted are unacceptable
 	while int(params[0].strip('"\n')) not in acceptable_params:
 		# tell the user the calibration failed

@@ -64,21 +64,28 @@ def Markov():
                     time.sleep(1) 
 
             # retrieve the size of file
-            open("names.txt", "w")
-            file_size = os.path.getsize("names.txt")
+            open("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/names.txt", "w")
         
             # while the size of the file is zero wait for user input
-            while (file_size == 0):
-                # fetch user input
-                names = open("names.txt")
-                print(os.cwd())
-                names_lines = names.readlines()
-                file_size = os.path.getsize("names.txt")
-                logger.info("no user input")
+            input_path = "/opt/app/MarkovProprietary/pipelinestages/app/mount/input/names.txt"
+
+            while True:
+                file_size = os.path.getsize(input_path)
+                print(file_size)
+
+                if file_size > 0:
+                    break
+
+                logger.info("waiting for user input")
                 time.sleep(1)
 
+            with open(input_path, "r") as names:
+                names_lines = names.readlines()
+
+            logger.info(f"names_lines: {names_lines}")
+
             # fetch user input
-            names = open("names.txt")
+            names = open("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/names.txt")
             names_lines = names.readlines()
             logger.info(names_lines[0])
 
@@ -88,7 +95,7 @@ def Markov():
 
             # erase the data from names.txt
             logger.info("test")
-            with open("names.txt", "w"):
+            with open("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/names.txt", "w"):
                 pass
 
             while os.path.getsize("/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt") == 0:
@@ -233,7 +240,6 @@ def Markov():
                 time.sleep(1) 
 
             os.chdir("/opt/app/lightdock")
-            cleanup_lightdock()
             time.sleep(1)
             
             while not os.path.isfile("/opt/app/MarkovProprietary/pipelinestages/app/mount/input/ping.json"):

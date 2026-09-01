@@ -57,7 +57,7 @@ RUN cd ../MarkovProprietary/pipelinestages/make_tables/python && python unzip.py
 # Copy supervisord.conf into the container
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-RUN pip install flask flask_cors gunicorn jwt
+RUN pip install flask flask_cors gunicorn PyJWT
 
 EXPOSE 8888 4000 8000 0000
 

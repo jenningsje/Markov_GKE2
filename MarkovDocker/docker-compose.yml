@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.Markov
-    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:33
+    image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:40
     stdin_open: true
     tty: true
     dns:

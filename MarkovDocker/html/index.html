@@ -7,29 +7,24 @@
   <title>Markov-Eklypse Simulator</title>
   <style>
     body {
-      background-color: rgb(33, 33, 33); /* page background */
-      font-family: Calibri, sans-serif; /* use Calibri */
+      background-color: rgb(33, 33, 33);
+      font-family: Calibri, sans-serif;
     }
-
-    /* Centering wrapper for search bar */
     .input_wrapper {
       display: flex;
       flex-direction: column;
       align-items: center;
       width: 50%;
-      max-width: 400px;         
-      margin: 30px auto 20px; 
+      max-width: 400px;
+      margin: 30px auto 20px;
     }
-
-    /* Collapsing search input */
     .container {
       position: relative;
-      --size: 44px; 
+      --size: 44px;
       width: var(--size);
       height: var(--size);
       color: white;
     }
-
     .input {
       width: 100%;
       height: 100%;
@@ -40,47 +35,40 @@
       border: none;
       outline: none;
       background-color: #191A1E;
-      color: transparent;         /* hides text until expanded */
+      color: transparent;
       caret-color: transparent;
       border-radius: 50%;
       cursor: pointer;
       transition: all 0.35s ease;
-      box-shadow: 
+      box-shadow:
         1.5px 1.5px 3px #0e0e0e,
         -1.5px -1.5px 3px rgba(95, 94, 94, 0.25),
         inset 0 0 0 #0e0e0e,
         inset 0 0 0 #5f5e5e;
     }
-
-    /* Expanded / active state */
     .input:focus,
     .input:not(:placeholder-shown) {
       width: 240px;
-      padding-left: var(--size);  /* restore padding when expanded */
+      padding-left: var(--size);
       padding-right: 16px;
       color: white;
       caret-color: white;
       cursor: text;
-      border-radius: 999px;       /* slightly pill shape when expanded */
-      box-shadow: 
+      border-radius: 999px;
+      box-shadow:
         0 0 0 #0e0e0e,
         0 0 0 rgba(95, 94, 94, 0.25),
         inset 1.5px 1.5px 3px #0e0e0e,
         inset -1.5px -1.5px 3px #5f5e5e;
     }
-
-    /* Placeholder handling */
     .input::placeholder {
       opacity: 0;
       color: transparent;
     }
-
     .input:focus::placeholder {
       opacity: 0.65;
       color: rgba(255, 255, 255, 0.65);
     }
-
-    /* Icon always centered in circle */
     .container .icon {
       position: absolute;
       inset: 0;
@@ -89,13 +77,10 @@
       justify-content: center;
       pointer-events: none;
     }
-
     .container .icon svg {
       width: 58%;
       height: 58%;
     }
-
-    /* Animated button (cleaned up, same behavior) */
     .animated-button {
       position: relative;
       display: flex;
@@ -112,9 +97,8 @@
       cursor: pointer;
       overflow: hidden;
       transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-      margin-top: 20px; /* adds space above the button */
+      margin-top: 20px;
     }
-
     .animated-button svg {
       position: absolute;
       width: 22px;
@@ -122,17 +106,18 @@
       z-index: 2;
       transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
     }
-
-    .animated-button .arr-1 { right: 16px; }
-    .animated-button .arr-2 { left: -40%; }
-
+    .animated-button .arr-1 {
+      right: 16px;
+    }
+    .animated-button .arr-2 {
+      left: -40%;
+    }
     .animated-button .text {
       position: relative;
       z-index: 1;
       transform: translateX(-8px);
       transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
     }
-
     .animated-button .circle {
       position: absolute;
       top: 50%;
@@ -145,31 +130,35 @@
       opacity: 0;
       transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
     }
-
     .animated-button:hover {
       color: #121212;
       border-color: transparent;
       box-shadow: 0 0 0 14px transparent;
       border-radius: 16px;
     }
-
-    .animated-button:hover .arr-1 { right: -40%; }
-    .animated-button:hover .arr-2 { left: 16px; }
-    .animated-button:hover .text { transform: translateX(8px); }
-    .animated-button:hover svg { fill: #121212; }
+    .animated-button:hover .arr-1 {
+      right: -40%;
+    }
+    .animated-button:hover .arr-2 {
+      left: 16px;
+    }
+    .animated-button:hover .text {
+      transform: translateX(8px);
+    }
+    .animated-button:hover svg {
+      fill: #121212;
+    }
     .animated-button:hover .circle {
       width: 260px;
       height: 260px;
       opacity: 1;
     }
-
     .animated-button:active {
       scale: 0.96;
       box-shadow: 0 0 0 6px greenyellow;
     }
-
     .search-button {
-      margin-left: 8px; /* space between input and arrow */
+      margin-left: 8px;
       margin-right: 20px;
       background-color: transparent;
       outline: none;
@@ -184,232 +173,484 @@
       height: 35px;
       transition: background-color 0.3s ease;
     }
-
     .search-button:hover {
-      background-color: greenyellow; /* hover box */
+      background-color: greenyellow;
     }
-
     .search-button svg {
       width: 100%;
       height: 100%;
     }
-
     .search-button svg line {
-      stroke: greenyellow; /* arrow color */
+      stroke: greenyellow;
       stroke-width: 3;
       stroke-linecap: round;
       transition: stroke 0.3s ease;
     }
-
     .search-button:hover svg line {
-      stroke: black; /* contrast on hover */
+      stroke: black;
     }
-
   </style>
 </head>
 <body>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">RUNNING MARKOV</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">Instructions</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(1) Use codel to ask for two proteins with the corresponding properties of your choices that you plan to run in the docking simulation.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(2) By using codel for software engineering and Machine Learning development you consent to the Affredo License for all outputs of the model.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(3) The Simulator uses glowworm swarm optimization and quantum statistical field theoretic corrections with 96.63% accuracy to achieve optimal results.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(4) Submit two proteins that wish to simulate the docking simulation with in the platform.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(5) If you entered a bad entry try again.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(6) Select the number of cores from 1 to four that you wish to use for the simulation, in the majority of cases you will need 1 core, 1000 glowworms and 10 steps.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(7) Select the number of glowworms you wish to use for the simulation.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(8) Select the number of steps you wish to use for the simulation.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(9) Each docking simulation will take a few hours to complete and you can submit hundreds per thousands of simulations per day if you wish to do so.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(10) Afterwards it is advised that the pdb file be used in experimental equipment to verify the treatment in the laboratory.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(11) Uses in the development in pathogens or weapons of mass destruction are stricly forbidden and will result in a permanent ban.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">(12) By using our software you consent that you will abide by these rules and that they will be enforced on the individuals that use this platform.</div>
-  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">Best! Integral Sequencing Team</div>
-  
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    RUNNING MARKOV
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    Instructions
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (1) Use codel to ask for two proteins with the corresponding properties of your choices that you plan to run in the docking simulation.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (2) By using codel for software engineering and Machine Learning development you consent to the Affredo License for all outputs of the model.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (3) The Simulator uses glowworm swarm optimization and quantum statistical field theoretic corrections with 96.63% accuracy to achieve optimal results.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (4) Submit two proteins that wish to simulate the docking simulation with in the platform.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (5) If you entered a bad entry try again.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (6) Select the number of cores from 1 to four that you wish to use for the simulation, in the majority of cases you will need 1 core, 1000 glowworms and 10 steps.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (7) Select the number of glowworms you wish to use for the simulation.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (8) Select the number of steps you wish to use for the simulation.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (9) Each docking simulation will take a few hours to complete and you can submit hundreds per thousands of simulations per day if you wish to do so.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (10) Afterwards it is advised that the pdb file be used in experimental equipment to verify the treatment in the laboratory.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (11) Uses in the development in pathogens or weapons of mass destruction are stricly forbidden and will result in a permanent ban.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (12) By using our software you consent that you will abide by these rules and that they will be enforced on the individuals that use this platform.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    Best! Integral Sequencing Team
+  </div>
   <form id="searchForm" style="margin-top: 20px; display: inline-block;">
     <div class="container">
-      <input type="text" name="text" class="input" required placeholder="Type to search...">
-        <div class="icon">
-          <svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512">
-            <title>Search</title>
-              <path d="M221.09 64a157.09 157.09 0 10157.09 157.09A157.1 157.1 0 00221.09 64z" fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="32"></path>
-              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="32" d="M338.29 338.29L448 448"></path>
-            </svg>
-        </div>
+      <input
+        type="text"
+        name="text"
+        class="input"
+        required
+        placeholder="Type to search..."
+      >
+      <div class="icon">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="ionicon"
+          viewBox="0 0 512 512"
+        >
+          <title>Search</title>
+          <path
+            d="M221.09 64a157.09 157.09 0 10157.09 157.09A157.1 157.1 0 00221.09 64z"
+            fill="none"
+            stroke="currentColor"
+            stroke-miterlimit="10"
+            stroke-width="32"
+          ></path>
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-miterlimit="10"
+            stroke-width="32"
+            d="M338.29 338.29L448 448"
+          ></path>
+        </svg>
       </div>
-    <button class="search-button" style="margin-top: 8px;">
-      <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+    </div>
+    <button
+      class="search-button"
+      style="margin-top: 8px;"
+    >
+      <svg
+        viewBox="0 0 50 50"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <line x1="5" y1="25" x2="40" y2="25"/>
         <line x1="30" y1="15" x2="40" y2="25"/>
         <line x1="30" y1="35" x2="40" y2="25"/>
       </svg>
     </button>
   </form>
-
   <form id="runLightdock">
     <button class="animated-button">
-      <svg viewBox="0 0 24 24" class="arr-2" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        viewBox="0 0 24 24"
+        class="arr-2"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <path
           d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
         ></path>
       </svg>
-      <span class="text">Run Simulation</span>
+      <span class="text">
+        Run Simulation
+      </span>
       <span class="circle"></span>
-      <svg viewBox="0 0 24 24" class="arr-1" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        viewBox="0 0 24 24"
+        class="arr-1"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <path
           d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
         ></path>
       </svg>
     </button>
   </form>
-  <div id="fileContent" style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;"></div>
-  <div id="status" style="color: lightgreen; margin-top: 10px;"></div>
+  <div
+    id="fileContent"
+    style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;"
+  ></div>
+  <div
+    id="status"
+    style="color: lightgreen; margin-top: 10px;"
+  ></div>
   <script>
-    async function fetchFileContent() {
+    // ============================================================
+    // USER-SPECIFIC ROUTING
+    // ============================================================
+    let CURRENT_USER_ID = null;
+    let USER_SERVER_ONE_HTML = null;
+    let USER_RECEIVE_SIGNAL_HTML = null;
+    // ============================================================
+    // GET CURRENT AUTHENTICATED USER
+    // ============================================================
+    async function initializeUser() {
       try {
-        const response = await fetch('/server_one/html', {
-          method: 'GET',
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const text = await response.text();
-      
-          // Split the content at the first occurrence of "..."
-          const splitContent = text.split('...')[0] + '...';
-          
-          let message = splitContent.split('\n')[0]; 
-          document.getElementById('fileContent').innerText = message;
-	  
-          // split the file content into lines
-          const lines = text.split(/\r?\n/);
-
-          // Ensure there's at least two lines to check for a blank line
-          if (lines.length < 2) {
-            console.log("No second line or content to process.");
-          } else if (/^\s*$/.test(lines[1])) {
-            // join and log the content to the console after the blank line
-            console.log(lines.slice(2).join("\n"));
-            // display the table
-            displayTable(lines.slice(2).join("\n"))
-          } else if (!/^\s*$/.test(lines[1])) {
-           console.log("No blank line after the first line.");
-          } else {
-            console.error("Error fetching tabular data: ", response.status)
+        const response = await fetch(
+          '/auth/verify',
+          {
+            method: 'GET',
+            credentials: 'include'
           }
-          
-          // Send the fetched content to the backend
+        );
+        if (!response.ok) {
+          throw new Error(
+            `Authentication failed: ${response.status}`
+          );
+
+        }
+        const result = await response.json();
+        /*
+         * The backend should return:
+         *
+         * {
+         *     ok: true,
+         *     user_id: 1
+         * }
+         */
+        if (
+          result.user_id === undefined ||
+          result.user_id === null
+        ) {
+          throw new Error(
+            'Authenticated user ID was not returned by /auth/verify'
+          );
+        }
+        CURRENT_USER_ID = result.user_id;
+        const userPath =
+          `user-${CURRENT_USER_ID}`;
+        // Build all user-specific API paths here.
+        USER_SERVER_ONE_HTML =
+          `/server_one/${userPath}/html`;
+        USER_RECEIVE_SIGNAL_HTML =
+          `/receive_signal/${userPath}/html`;
+        console.log(
+          `Authenticated as ${userPath}`
+        );
+        console.log(
+          `Server one endpoint: ${USER_SERVER_ONE_HTML}`
+        );
+        console.log(
+          `Receive signal endpoint: ${USER_RECEIVE_SIGNAL_HTML}`
+        );
+        return true;
+      } catch (error) {
+        console.error(
+          'Unable to initialize authenticated user:',
+          error
+        );
+        document.getElementById(
+          'status'
+        ).innerText =
+          'Authentication failed. Please log in again.';
+        return false;
+      }
+    }
+    // ============================================================
+    // FETCH USER FILE CONTENT
+    // ============================================================
+    async function fetchFileContent() {
+      if (!CURRENT_USER_ID) {
+        console.error(
+          'Cannot fetch file content: user is not initialized.'
+        );
+        return;
+      }
+      try {
+        const response = await fetch(
+          USER_SERVER_ONE_HTML,
+          {
+            method: 'GET',
+            credentials: 'include'
+          }
+        );
+        if (response.ok) {
+          const text =
+            await response.text();
+          // Split the content at the first occurrence of "..."
+          const splitContent =
+            text.split('...')[0] + '...';
+          let message =
+            splitContent.split('\n')[0];
+          document.getElementById(
+            'fileContent'
+          ).innerText = message;
+          // Split file content into lines.
+          const lines =
+            text.split(/\r?\n/);
+          if (lines.length < 2) {
+            console.log(
+              "No second line or content to process."
+            );
+          } else if (/^\s*$/.test(lines[1])) {
+            console.log(
+              lines.slice(2).join("\n")
+            );
+            displayTable(
+              lines.slice(2).join("\n")
+            );
+          } else if (!/^\s*$/.test(lines[1])) {
+            console.log(
+              "No blank line after the first line."
+            );
+          } else {
+            console.error(
+              "Error fetching tabular data:",
+              response.status
+            );
+          }
+          // Send the fetched content to the
+          // authenticated user's backend.
           await sendFileContentToBackend();
         } else {
-          console.error("Error fetching the file:", response.status);
+          console.error(
+            "Error fetching the file:",
+            response.status
+          );
         }
       } catch (error) {
-        console.error("Error fetching the file:", error);
-      }    
+        console.error(
+          "Error fetching the file:",
+          error
+        );
+
+      }
     }
-
+    // ============================================================
+    // SEND CONTENT TO USER-SPECIFIC BACKEND
+    // ============================================================
     async function sendFileContentToBackend() {
+      if (!CURRENT_USER_ID) {
+        console.error(
+          'Cannot send content: user is not initialized.'
+        );
+        return;
+      }
       try {
-        const fileContent = document.getElementById('fileContent').innerText;
-
-        const response = await fetch('/receive_signal/html', {
+        const fileContent =
+          document.getElementById(
+            'fileContent'
+          ).innerText;
+        const response = await fetch(
+          USER_RECEIVE_SIGNAL_HTML,
+          {
             method: 'POST',
             credentials: 'include',
             headers: {
-                'Content-Type': 'application/json',
+              'Content-Type':
+                'application/json'
             },
-            body: JSON.stringify({ content: fileContent }),
-        });
-
-        if (response.ok) {
-              console.log('File content sent to backend successfully');
-              const result = await response.json();
-              document.getElementById('status').innerText = result.message;
-          } else {
-              console.error('Error sending file content to backend:', response.status);
+            body: JSON.stringify({
+              content: fileContent
+            })
           }
+        );
+        if (response.ok) {
+          console.log(
+            `File content sent successfully for user-${CURRENT_USER_ID}`
+          );
+          const result =
+            await response.json();
+          document.getElementById(
+            'status'
+          ).innerText =
+            result.message || 'Success';
+        } else {
+          console.error(
+            'Error sending file content:',
+            response.status
+          );
+        }
       } catch (error) {
-          console.error('Error:', error);
+        console.error(
+          'Error sending file content:',
+          error
+        );
       }
     }
-
+    // ============================================================
+    // TABLE DISPLAY
+    // ============================================================
     function displayTable(rawData) {
       try {
-        // Get the div where content is to be displayed
-        const fileContentDiv = document.getElementById('fileContent');
-
-        // Parse raw data into an array of objects
-        const lines = rawData.trim().split('\n'); // Split raw data into lines
-        const headers = lines[0].trim().split(/\s+/); // Extract headers (first line)
-        const data = lines.slice(1).map((line) => {
-            const values = line.trim().split(/\s+/); // Split line into values
+        const fileContentDiv =
+          document.getElementById(
+            'fileContent'
+          );
+        const lines =
+          rawData.trim().split('\n');
+        if (
+          lines.length === 0 ||
+          !rawData.trim()
+        ) {
+          return;
+        }
+        const headers =
+          lines[0]
+            .trim()
+            .split(/\s+/);
+        const data =
+          lines.slice(1).map((line) => {
+            const values =
+              line.trim().split(/\s+/);
             const row = {};
-            headers.forEach((header, index) => {
-                row[header] = values[index] || ''; // Map headers to values
-            });
+            headers.forEach(
+              (header, index) => {
+                row[header] =
+                  values[index] || '';
+              }
+            );
             return row;
-        });
-
-        // Validate if data is parsed correctly
+          });
         if (data.length === 0) {
-          const fileContentDiv = document.getElementById('fileContent');
+          return;
         }
-
-        // Create a table element
-        const table = document.createElement('table');
-        table.style.borderCollapse = 'collapse';
-        table.style.width = '100%';
-        table.style.color = 'white';
-        table.style.backgroundColor = '#3e3e3e';
-
-        // Add table headers
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
+        const table =
+          document.createElement('table');
+        table.style.borderCollapse =
+          'collapse';
+        table.style.width =
+          '100%';
+        table.style.color =
+          'white';
+        table.style.backgroundColor =
+          '#3e3e3e';
+        const thead =
+          document.createElement('thead');
+        const headerRow =
+          document.createElement('tr');
         headers.forEach((key) => {
-            const th = document.createElement('th');
-            th.textContent = key;
-            th.style.border = '1px solid #ddd';
-            th.style.padding = '8px';
-            th.style.textAlign = 'left';
-            th.style.backgroundColor = '#555';
-            th.style.color = 'white';
-            headerRow.appendChild(th);
+          const th =
+            document.createElement('th');
+          th.textContent =
+            key;
+          th.style.border =
+            '1px solid #ddd';
+          th.style.padding =
+            '8px';
+          th.style.textAlign =
+            'left';
+          th.style.backgroundColor =
+            '#555';
+          th.style.color =
+            'white';
+          headerRow.appendChild(th);
         });
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-
-        // Add table rows
-        const tbody = document.createElement('tbody');
+        thead.appendChild(
+          headerRow
+        );
+        table.appendChild(
+          thead
+        );
+        const tbody =
+          document.createElement('tbody');
         data.forEach((row) => {
-            const tr = document.createElement('tr');
-            headers.forEach((key) => {
-                const td = document.createElement('td');
-                td.textContent = row[key];
-                td.style.border = '1px solid #ddd';
-                td.style.padding = '8px';
-                td.style.textAlign = 'left';
-                td.style.color = 'white';
-                td.style.backgroundColor = '#464646';
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
+          const tr =
+            document.createElement('tr');
+          headers.forEach((key) => {
+            const td =
+              document.createElement('td');
+            td.textContent =
+              row[key];
+            td.style.border =
+              '1px solid #ddd';
+            td.style.padding =
+              '8px';
+            td.style.textAlign =
+              'left';
+            td.style.color =
+              'white';
+            td.style.backgroundColor =
+              '#464646';
+            tr.appendChild(td);
+          });
+          tbody.appendChild(
+            tr
+          );
         });
-        table.appendChild(tbody);
-
-        // Append the table to the fileContentDiv
-        fileContentDiv.appendChild(table);
-        } catch (error) {
-            // Display error message
-            const fileContentDiv = document.getElementById('fileContent');
-            fileContentDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        table.appendChild(
+          tbody
+        );
+        fileContentDiv.appendChild(
+          table
+        );
+      } catch (error) {
+        const fileContentDiv =
+          document.getElementById(
+            'fileContent'
+          );
+        fileContentDiv.innerHTML =
+          `<p style="color: red;">Error: ${error.message}</p>`;
+      }
+    }
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+    async function initializeApplication() {
+      const authenticated =
+        await initializeUser();
+      if (!authenticated) {
+        return;
+      }
+      // First request happens only after we know
+      // which user is logged in.
+      await fetchFileContent();
+      // Continue polling the SAME user's endpoint.
+      setInterval(() => {
+        if (
+          document.visibilityState === 'visible'
+        ) {
+          fetchFileContent();
         }
-      }
-
-    // Check for file updates and fetch content every 5 seconds
-    fetchFileContent();
-
-    setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchFileContent();
-      }
-    }, 5000);
+      }, 5000);
+    }
+    initializeApplication();
   </script>
   <script src="client.js?v=12345" defer></script>
   <script src="simulate/client.js" defer></script>

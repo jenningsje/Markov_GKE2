@@ -1,3 +1,18 @@
 FROM nginx:alpine
 
+# Install Node.js and npm
+RUN apk add --no-cache nodejs npm
+
+# Copy the nginx website
 COPY ./html /usr/share/nginx/html
+
+# Install the Node dependencies
+WORKDIR /usr/share/nginx/html
+
+RUN npm install express
+
+# Expose nginx and the user-creation API
+EXPOSE 80 4001
+
+# Start both Node API and nginx
+CMD ["sh", "-c", "node /usr/share/nginx/html/create-user.js & nginx -g 'daemon off;'"]

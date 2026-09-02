@@ -1,6 +1,5 @@
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 
 const app = express();
 
@@ -11,7 +10,10 @@ const PORT = 4001;
 app.post('/', async (req, res) => {
   const { userId } = req.body;
 
+  console.log('========================================');
+  console.log('CREATE USER REQUEST');
   console.log('Received userId:', userId);
+  console.log('========================================');
 
   if (!userId) {
     return res.status(400).json({
@@ -19,7 +21,6 @@ app.post('/', async (req, res) => {
     });
   }
 
-  // Prevent the user ID from being used as a filesystem traversal path.
   const safeUserId = String(userId).replace(/[^a-zA-Z0-9_-]/g, '');
 
   if (!safeUserId) {
@@ -31,22 +32,24 @@ app.post('/', async (req, res) => {
   const source = '/usr/share/nginx/html';
   const destination = `/usr/share/nginx/${safeUserId}/html`;
 
+  console.log('Source:', source);
+  console.log('Destination:', destination);
+
   try {
-    // Create:
-    // /usr/share/nginx/<user-id>/html
+    // Create /usr/share/nginx/<user-id>/html
     await fs.promises.mkdir(destination, {
       recursive: true
     });
 
-    // Copy EVERYTHING inside /usr/share/nginx/html
+    console.log('Destination directory created');
+
+    // Copy everything in /usr/share/nginx/html
     // into /usr/share/nginx/<user-id>/html
     await fs.promises.cp(source, destination, {
       recursive: true
     });
 
-    console.log(
-      `Copied ${source} -> ${destination}`
-    );
+    console.log(`Successfully copied ${source} -> ${destination}`);
 
     return res.status(200).json({
       success: true,
@@ -55,10 +58,10 @@ app.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    console.error(
-      `Failed to initialize workspace for user ${safeUserId}:`,
-      err
-    );
+    console.error('========================================');
+    console.error('COPY FAILED');
+    console.error(err);
+    console.error('========================================');
 
     return res.status(500).json({
       error: 'Failed to copy nginx workspace',
@@ -68,5 +71,7 @@ app.post('/', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Simulator running on 0.0.0.0:${PORT}`);
+  console.log(`========================================`);
+  console.log(`User creation API listening on 0.0.0.0:${PORT}`);
+  console.log(`========================================`);
 });

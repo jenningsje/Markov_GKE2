@@ -162,14 +162,20 @@ app.get('/auth/verify', (req, res) => {
     const token = req.cookies.token;
 
     if (!token) {
-        return res.sendStatus(401);
+        return res.status(401).json({ message: 'No token' });
     }
 
     try {
-        jwt.verify(token, JWT_SECRET);
-        return res.sendStatus(200);
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        res.setHeader('X-User-ID', String(decoded.id));
+
+        return res.status(200).json({
+            ok: true,
+            user_id: decoded.id
+        });
     } catch (err) {
-        return res.sendStatus(403);
+        return res.status(403).json({ message: 'Invalid token' });
     }
 });
 

@@ -105,15 +105,56 @@ app.post('/login', async (req, res) => {
       maxAge: 3600000
     });
 
+    // Tell the simulator service to create the user's nginx directory
+    // and copy the default html contents into it.
+    try {
+      const appsResponse = await fetch('http://simulator:4001/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: user.id
+        })
+      });
+
+      if (!appsResponse.ok) {
+        const errorText = await appsResponse.text();
+
+        console.error(
+          `Failed to initialize user directory for ${user.id}:`,
+          appsResponse.status,
+          errorText
+        );
+
+        return res.status(500).json({
+          error: 'Login succeeded, but user workspace could not be initialized'
+        });
+      }
+
+      console.log(`Initialized nginx workspace for user ${user.id}`);
+
+    } catch (appsError) {
+      console.error(
+        `Could not contact apps service for user ${user.id}:`,
+        appsError
+      );
+
+      return res.status(500).json({
+        error: 'Login succeeded, but user workspace could not be initialized'
+      });
+    }
+
     return res.json({
       success: true
     });
 
-    return res.json({ success: true });
-
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Server error' });
+
+    return res.status(500).json({
+      error: 'Server error'
+    });
   }
 });
 

@@ -324,9 +324,25 @@
     // ============================================================
     // USER-SPECIFIC ROUTING
     // ============================================================
+    //
+    // IMPORTANT:
+    // The browser does NOT construct /user-1/, /user-2/, etc.
+    //
+    // server_one.js gets the user ID from the authenticated JWT:
+    //
+    //     req.user.id
+    //
+    // and then maps that to:
+    //
+    //     /opt/app/MarkovProprietary/pipelinestages/app/mount/
+    //         user-${userId}/input
+    //
+    //         user-${userId}/output
+    //
+    // ============================================================
     let CURRENT_USER_ID = null;
-    let USER_SERVER_ONE_HTML = null;
-    let USER_RECEIVE_SIGNAL_HTML = null;
+    const USER_SERVER_ONE_HTML = '/server_one/html';
+    const USER_SERVER_ONE_SIMULATE = '/server_one/html/simulate';
     // ============================================================
     // GET CURRENT AUTHENTICATED USER
     // ============================================================
@@ -343,41 +359,33 @@
           throw new Error(
             `Authentication failed: ${response.status}`
           );
-
         }
         const result = await response.json();
         /*
-         * The backend should return:
-         *
-         * {
-         *     ok: true,
-         *     user_id: 1
-         * }
-         */
+        * server_one.js should return:
+        *
+        * {
+        *     ok: true,
+        *     user_id: 1
+        * }
+        *
+        * The user ID is informational here.
+        *
+        * It is NOT used to construct the API URL.
+        */
         if (
-          result.user_id === undefined ||
-          result.user_id === null
+          result.user_id !== undefined &&
+          result.user_id !== null
         ) {
-          throw new Error(
-            'Authenticated user ID was not returned by /auth/verify'
-          );
+          CURRENT_USER_ID = result.user_id;
         }
-        CURRENT_USER_ID = result.user_id;
-        const userPath =
-          `user-${CURRENT_USER_ID}`;
-        // Build all user-specific API paths here.
-        USER_SERVER_ONE_HTML =
-          `/server_one/${userPath}/html`;
-        USER_RECEIVE_SIGNAL_HTML =
-          `/receive_signal/${userPath}/html`;
         console.log(
-          `Authenticated as ${userPath}`
+          'Authenticated user:',
+          CURRENT_USER_ID
         );
         console.log(
-          `Server one endpoint: ${USER_SERVER_ONE_HTML}`
-        );
-        console.log(
-          `Receive signal endpoint: ${USER_RECEIVE_SIGNAL_HTML}`
+          'Server one endpoint:',
+          USER_SERVER_ONE_HTML
         );
         return true;
       } catch (error) {
@@ -393,123 +401,86 @@
       }
     }
     // ============================================================
-    // FETCH USER FILE CONTENT
+    // FETCH USER MESSAGE
+    // ============================================================
+    //
+    // server_one.js performs:
+    //
+    //   req.user.id
+    //
+    // then:
+    //
+    //   user-${req.user.id}/output/message.txt
+    //
+    // Therefore every authenticated user automatically gets
+    // their own message.txt.
+    //
     // ============================================================
     async function fetchFileContent() {
-      if (!CURRENT_USER_ID) {
-        console.error(
-          'Cannot fetch file content: user is not initialized.'
-        );
-        return;
-      }
       try {
         const response = await fetch(
           USER_SERVER_ONE_HTML,
           {
             method: 'GET',
-            credentials: 'include'
-          }
-        );
-        if (response.ok) {
-          const text =
-            await response.text();
-          // Split the content at the first occurrence of "..."
-          const splitContent =
-            text.split('...')[0] + '...';
-          let message =
-            splitContent.split('\n')[0];
-          document.getElementById(
-            'fileContent'
-          ).innerText = message;
-          // Split file content into lines.
-          const lines =
-            text.split(/\r?\n/);
-          if (lines.length < 2) {
-            console.log(
-              "No second line or content to process."
-            );
-          } else if (/^\s*$/.test(lines[1])) {
-            console.log(
-              lines.slice(2).join("\n")
-            );
-            displayTable(
-              lines.slice(2).join("\n")
-            );
-          } else if (!/^\s*$/.test(lines[1])) {
-            console.log(
-              "No blank line after the first line."
-            );
-          } else {
-            console.error(
-              "Error fetching tabular data:",
-              response.status
-            );
-          }
-          // Send the fetched content to the
-          // authenticated user's backend.
-          await sendFileContentToBackend();
-        } else {
-          console.error(
-            "Error fetching the file:",
-            response.status
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Error fetching the file:",
-          error
-        );
-
-      }
-    }
-    // ============================================================
-    // SEND CONTENT TO USER-SPECIFIC BACKEND
-    // ============================================================
-    async function sendFileContentToBackend() {
-      if (!CURRENT_USER_ID) {
-        console.error(
-          'Cannot send content: user is not initialized.'
-        );
-        return;
-      }
-      try {
-        const fileContent =
-          document.getElementById(
-            'fileContent'
-          ).innerText;
-        const response = await fetch(
-          USER_RECEIVE_SIGNAL_HTML,
-          {
-            method: 'POST',
             credentials: 'include',
-            headers: {
-              'Content-Type':
-                'application/json'
-            },
-            body: JSON.stringify({
-              content: fileContent
-            })
+            cache: 'no-store'
           }
         );
-        if (response.ok) {
-          console.log(
-            `File content sent successfully for user-${CURRENT_USER_ID}`
-          );
-          const result =
-            await response.json();
-          document.getElementById(
-            'status'
-          ).innerText =
-            result.message || 'Success';
-        } else {
+        if (!response.ok) {
+          if (response.status === 401) {
+            console.error(
+              'Authentication required while fetching user output.'
+            );
+            return;
+          }
+          if (response.status === 404) {
+            console.log(
+              'User output message.txt does not exist yet.'
+            );
+            return;
+          }
           console.error(
-            'Error sending file content:',
+            'Error fetching user output:',
             response.status
+          );
+          return;
+        }
+        const text =
+          await response.text();
+        // --------------------------------------------------------
+        // DISPLAY FIRST MESSAGE
+        // --------------------------------------------------------
+        const splitContent =
+          text.split('...')[0] + '...';
+        const message =
+          splitContent.split('\n')[0];
+        document.getElementById(
+          'fileContent'
+        ).innerText = message;
+        // --------------------------------------------------------
+        // PROCESS TABLE DATA
+        // --------------------------------------------------------
+        const lines =
+          text.split(/\r?\n/);
+        if (lines.length < 2) {
+          console.log(
+            'No second line or content to process.'
+          );
+          return;
+        }
+        if (/^\s*\*\s*$/.test(lines[1])) {
+          const tableData =
+            lines.slice(2).join('\n');
+          console.log(tableData);
+          displayTable(tableData);
+        } else {
+          console.log(
+            'No table separator after the first line.'
           );
         }
       } catch (error) {
         console.error(
-          'Error sending file content:',
+          'Error fetching user output:',
           error
         );
       }
@@ -582,12 +553,8 @@
             'white';
           headerRow.appendChild(th);
         });
-        thead.appendChild(
-          headerRow
-        );
-        table.appendChild(
-          thead
-        );
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
         const tbody =
           document.createElement('tbody');
         data.forEach((row) => {
@@ -610,45 +577,119 @@
               '#464646';
             tr.appendChild(td);
           });
-          tbody.appendChild(
-            tr
-          );
+          tbody.appendChild(tr);
         });
-        table.appendChild(
-          tbody
-        );
-        fileContentDiv.appendChild(
-          table
-        );
+        table.appendChild(tbody);
+        // Do not continuously append duplicate tables.
+        const oldTable =
+          fileContentDiv.querySelector('table');
+        if (oldTable) {
+          oldTable.remove();
+        }
+        fileContentDiv.appendChild(table);
       } catch (error) {
         const fileContentDiv =
           document.getElementById(
             'fileContent'
           );
         fileContentDiv.innerHTML =
-          `<p style="color: red;">Error: ${error.message}</p>`;
+          `<p style="color: red;">
+            Error: ${error.message}
+          </p>`;
       }
     }
     // ============================================================
+    // RUN SIMULATION
+    // ============================================================
+    async function runSimulation() {
+      try {
+        document.getElementById(
+          'status'
+        ).innerText =
+          'Starting simulation...';
+        const response =
+          await fetch(
+            USER_SERVER_ONE_SIMULATE,
+            {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+              body: JSON.stringify({})
+            }
+          );
+        const result =
+          await response.json();
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            result.message ||
+            `Simulation request failed: ${response.status}`
+          );
+        }
+        console.log(
+          'Simulation request successful:',
+          result
+        );
+        document.getElementById(
+          'status'
+        ).innerText =
+          result.message ||
+          `Simulation started for user-${result.user_id}`;
+      } catch (error) {
+        console.error(
+          'Simulation failed:',
+          error
+        );
+        document.getElementById(
+          'status'
+        ).innerText =
+          `Simulation failed: ${error.message}`;
+      }
+    }
+    // ============================================================
+    // SIMULATION BUTTON
+    // ============================================================
+    document
+      .getElementById('runLightdock')
+      .addEventListener(
+        'submit',
+        async (event) => {
+          event.preventDefault();
+          await runSimulation();
+        }
+      );
+
+    // ============================================================
     // INITIALIZATION
     // ============================================================
+
     async function initializeApplication() {
       const authenticated =
         await initializeUser();
       if (!authenticated) {
         return;
       }
-      // First request happens only after we know
-      // which user is logged in.
+      // First request happens only after authentication.
       await fetchFileContent();
-      // Continue polling the SAME user's endpoint.
-      setInterval(() => {
-        if (
-          document.visibilityState === 'visible'
-        ) {
-          fetchFileContent();
-        }
-      }, 5000);
+      // Continue polling the SAME authenticated user's output.
+      setInterval(
+        () => {
+
+          if (
+            document.visibilityState ===
+            'visible'
+          ) {
+
+            fetchFileContent();
+
+          }
+
+        },
+        5000
+      );
     }
     initializeApplication();
   </script>

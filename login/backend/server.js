@@ -105,10 +105,84 @@ app.post('/login', async (req, res) => {
       maxAge: 3600000
     });
 
-    // Tell the simulator service to create the user's nginx directory
-    // and copy the default html contents into it.
-    try {
-      const appsResponse = await fetch('http://simulator:4001/', {
+    // ============================================================
+  // START USER-SPECIFIC NODEAPP ENVIRONMENT
+  // ============================================================
+  //
+  // nodeapp verifies this JWT and gets the user ID from:
+  //
+  //     req.user.id
+  //
+  // Its POST /html route then calls:
+  //
+  //     provisionUserEnvironment(userId)
+  //
+  // which creates/reconciles:
+  //
+  //     downloadapp-${userId}
+  //     viewer-${userId}
+  //     codel-${userId}
+  //     lightdock-${userId}
+  //
+  // ============================================================
+
+  try {
+    const nodeResponse = await fetch(
+      'http://nodeapp:5001/html',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      }
+    );
+
+    if (!nodeResponse.ok) {
+      const errorText = await nodeResponse.text();
+
+      console.error(
+        `Failed to provision user environment for ${user.id}:`,
+        nodeResponse.status,
+        errorText
+      );
+
+      return res.status(500).json({
+        error:
+          'Login succeeded, but user environment could not be initialized'
+      });
+    }
+
+    const nodeEnvironment =
+      await nodeResponse.json();
+
+    console.log(
+      `User environment initialized for user ${user.id}:`,
+      nodeEnvironment
+    );
+
+  } catch (nodeError) {
+
+    console.error(
+      `Could not contact nodeapp for user ${user.id}:`,
+      nodeError
+    );
+
+    return res.status(500).json({
+      error:
+        'Login succeeded, but user environment could not be initialized'
+    });
+  }
+
+  // ============================================================
+  // INITIALIZE SIMULATOR NGINX WORKSPACE
+  // ============================================================
+
+  try {
+    const appsResponse = await fetch(
+      'http://simulator:4001/',
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -116,38 +190,44 @@ app.post('/login', async (req, res) => {
         body: JSON.stringify({
           userId: user.id
         })
-      });
-
-      if (!appsResponse.ok) {
-        const errorText = await appsResponse.text();
-
-        console.error(
-          `Failed to initialize user directory for ${user.id}:`,
-          appsResponse.status,
-          errorText
-        );
-
-        return res.status(500).json({
-          error: 'Login succeeded, but user workspace could not be initialized'
-        });
       }
+    );
 
-      console.log(`Initialized nginx workspace for user ${user.id}`);
+    if (!appsResponse.ok) {
+      const errorText = await appsResponse.text();
 
-    } catch (appsError) {
       console.error(
-        `Could not contact apps service for user ${user.id}:`,
-        appsError
+        `Failed to initialize nginx workspace for ${user.id}:`,
+        appsResponse.status,
+        errorText
       );
 
       return res.status(500).json({
-        error: 'Login succeeded, but user workspace could not be initialized'
+        error:
+          'Login succeeded, but simulator workspace could not be initialized'
       });
     }
 
-    return res.json({
-      success: true
+    console.log(
+      `Initialized nginx workspace for user ${user.id}`
+    );
+
+  } catch (appsError) {
+
+    console.error(
+      `Could not contact simulator for user ${user.id}:`,
+      appsError
+    );
+
+    return res.status(500).json({
+      error:
+        'Login succeeded, but simulator workspace could not be initialized'
     });
+  }
+
+  return res.json({
+    success: true
+  });
 
   } catch (err) {
     console.error(err);

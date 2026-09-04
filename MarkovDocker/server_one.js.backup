@@ -49,7 +49,7 @@ const LIGHTDOCK_IMAGE =
   'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:v64';
 
 const DOWNLOADAPP_IMAGE =
-  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/downloadapp:v24';
+  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/downloadapp:23';
 
 const VIEWER_IMAGE =
   'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/viewer:latest';
@@ -295,17 +295,15 @@ async function ensureUserWorkspace(userId) {
   );
 
   await fs.promises.mkdir(
-    userRoot,
+    userInputDir,
     {
       recursive: true
     }
   );
 
-  await fs.promises.mkdir(
-    userInputDir,
-    {
-      recursive: true
-    }
+  await copyDirectoryContents(
+    templateInputDir,
+    userInputDir
   );
 
   await fs.promises.mkdir(
@@ -314,45 +312,6 @@ async function ensureUserWorkspace(userId) {
       recursive: true
     }
   );
-
-  // ==========================================================
-  // COPY server_two.js INTO USER WORKSPACE
-  // KEEP THE ROOT server_two.js
-  // ==========================================================
-
-  const serverTwoSource =
-    path.join(
-      mountRoot,
-      'server_two.js'
-    );
-
-  const serverTwoDestination =
-    path.join(
-      userRoot,
-      'server_two.js'
-    );
-
-  await fs.promises.copyFile(
-    serverTwoSource,
-    serverTwoDestination
-  );
-
-  console.log(
-    `Copied server_two.js to user workspace: ${serverTwoDestination}`
-  );
-
-  // ==========================================================
-  // COPY TEMPLATE INPUT INTO USER WORKSPACE
-  // ==========================================================
-
-  await copyDirectoryContents(
-    templateInputDir,
-    userInputDir
-  );
-
-  // ==========================================================
-  // COPY TEMPLATE OUTPUT INTO USER WORKSPACE
-  // ==========================================================
 
   await copyDirectoryContents(
     templateOutputDir,
@@ -399,11 +358,16 @@ function getUserWorkerLabels(
   };
 }
 
-function getUserVolumeMount() {
+function getUserVolumeMount(userId) {
   return {
-    name: 'markov-app',
+    name:
+      'markov-app',
+
     mountPath:
-      '/opt/app/MarkovProprietary/pipelinestages/app/mount'
+      '/opt/app/MarkovProprietary/pipelinestages/app/mount',
+
+    subPath:
+      `user-${userId}`
   };
 }
 

@@ -55,7 +55,7 @@ const VIEWER_IMAGE =
   'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/viewer:latest';
 
 const CODEL_IMAGE =
-  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/codel:v41';
+  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/codel:v42';
 
 
 // ============================================================

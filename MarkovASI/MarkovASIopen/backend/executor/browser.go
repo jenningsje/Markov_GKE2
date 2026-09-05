@@ -164,7 +164,11 @@ func writeScreenshotToFile(screenshot []byte) (filename string, err error) {
 }
 
 func BrowserName() string {
-	return "codel-browser"
+    if name := os.Getenv("CODEL_BROWSER_NAME"); name != "" {
+        return name
+    }
+
+    return "codel-browser"
 }
 
 func loadPage() (*rod.Page, error) {

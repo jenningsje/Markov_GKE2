@@ -27,19 +27,19 @@ function runServer(script, callback) {
   return child;
 }
 
-console.log('Trying server_two.js...');
+console.log('Trying run_user_id_server_two.js...');
 
-const first = runServer('server_two.js', (error) => {
-  console.error('server_two.js error:');
+const first = runServer('run_user_id_server_two.js', (error) => {
+  console.error('run_user_id_server_two.js error:');
   console.error(error);
 
-  console.log('Trying run_user_id_server_two.js...');
+  console.log('Trying server_two.js...');
 
   const second = runServer(
-    'run_user_id_server_two.js',
+    'server_two.js',
     (error) => {
       console.error(
-        'run_user_id_server_two.js error:'
+        'server_two.js error:'
       );
       console.error(error);
 

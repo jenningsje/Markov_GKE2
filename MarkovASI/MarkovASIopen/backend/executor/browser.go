@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
@@ -32,26 +31,33 @@ const port = "9222"
 // GET USER ID FROM THE SAME JWT COOKIE AS SERVER_ONE.JS
 // ============================================================
 
-func GetUserIDFromRequest(r *http.Request) (string, error) {
+func GetUserIDFromRequest(
+	r *http.Request,
+) (string, error) {
 	if r == nil {
-		return "", fmt.Errorf("request is nil")
+		return "",
+			fmt.Errorf("request is nil")
 	}
 
 	cookie, err := r.Cookie("token")
+
 	if err != nil {
-		return "", fmt.Errorf(
-			"token cookie not found: %w",
-			err,
-		)
+		return "",
+			fmt.Errorf(
+				"token cookie not found: %w",
+				err,
+			)
 	}
 
 	tokenString := cookie.Value
 
 	jwtSecret := os.Getenv("JWT_SECRET")
+
 	if jwtSecret == "" {
-		return "", fmt.Errorf(
-			"JWT_SECRET environment variable is not set",
-		)
+		return "",
+			fmt.Errorf(
+				"JWT_SECRET environment variable is not set",
+			)
 	}
 
 	token, err := jwt.Parse(
@@ -62,33 +68,42 @@ func GetUserIDFromRequest(r *http.Request) (string, error) {
 	)
 
 	if err != nil {
-		return "", fmt.Errorf(
-			"JWT verification failed: %w",
-			err,
-		)
+		return "",
+			fmt.Errorf(
+				"JWT verification failed: %w",
+				err,
+			)
 	}
 
 	if !token.Valid {
-		return "", fmt.Errorf(
-			"JWT is invalid",
-		)
+		return "",
+			fmt.Errorf(
+				"JWT is invalid",
+			)
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
+	claims, ok :=
+		token.Claims.(jwt.MapClaims)
+
 	if !ok {
-		return "", fmt.Errorf(
-			"invalid JWT claims",
-		)
+		return "",
+			fmt.Errorf(
+				"invalid JWT claims",
+			)
 	}
 
-	userIDClaim, ok := claims["id"]
+	userIDClaim, ok :=
+		claims["id"]
+
 	if !ok {
-		return "", fmt.Errorf(
-			"user id missing from JWT",
-		)
+		return "",
+			fmt.Errorf(
+				"user id missing from JWT",
+			)
 	}
 
 	switch value := userIDClaim.(type) {
+
 	case float64:
 		return strconv.FormatInt(
 			int64(value),
@@ -97,9 +112,10 @@ func GetUserIDFromRequest(r *http.Request) (string, error) {
 
 	case string:
 		if value == "" {
-			return "", fmt.Errorf(
-				"user id in JWT is empty",
-			)
+			return "",
+				fmt.Errorf(
+					"user id in JWT is empty",
+				)
 		}
 
 		return value, nil
@@ -108,25 +124,74 @@ func GetUserIDFromRequest(r *http.Request) (string, error) {
 		return strconv.Itoa(value), nil
 
 	case int64:
-		return strconv.FormatInt(value, 10), nil
+		return strconv.FormatInt(
+			value,
+			10,
+		), nil
 
 	default:
-		return "", fmt.Errorf(
-			"unsupported user id type in JWT: %T",
-			userIDClaim,
-		)
+		return "",
+			fmt.Errorf(
+				"unsupported user id type in JWT: %T",
+				userIDClaim,
+			)
 	}
 }
 
 // ============================================================
-// INITIALIZE USER-SPECIFIC BROWSER
+// STARTUP INITIALIZATION
+//
+// This preserves the existing call:
+//
+//     executor.InitBrowser(queries)
+//
+// There is no HTTP request at process startup, so there is no
+// browser cookie available here.
+//
+// The startup function therefore only initializes the Docker
+// client/browser infrastructure if a user ID is available from
+// the environment.
+//
+// User-specific JWT initialization is handled by
+// InitBrowserForRequest() below.
 // ============================================================
 
 func InitBrowser(
+	db *database.Queries,
+) error {
+	userID := os.Getenv("CODEL_USER_ID")
+
+	if userID == "" {
+		log.Println(
+			"No CODEL_USER_ID available during startup; " +
+				"waiting for authenticated user request",
+		)
+
+		return nil
+	}
+
+	return initBrowserForUser(
+		userID,
+		db,
+	)
+}
+
+// ============================================================
+// REQUEST-BASED INITIALIZATION
+//
+// This is the function that should be used when an authenticated
+// HTTP request is available.
+//
+// It gets the JWT from the same "token" cookie used by
+// server_one.js and extracts the JWT "id" claim.
+// ============================================================
+
+func InitBrowserForRequest(
 	r *http.Request,
 	db *database.Queries,
 ) error {
-	userID, err := GetUserIDFromRequest(r)
+	userID, err :=
+		GetUserIDFromRequest(r)
 
 	if err != nil {
 		return fmt.Errorf(
@@ -140,7 +205,28 @@ func InitBrowser(
 		userID,
 	)
 
-	browserContainerName := BrowserName(userID)
+	return initBrowserForUser(
+		userID,
+		db,
+	)
+}
+
+// ============================================================
+// USER-SPECIFIC BROWSER INITIALIZATION
+// ============================================================
+
+func initBrowserForUser(
+	userID string,
+	db *database.Queries,
+) error {
+	if userID == "" {
+		return fmt.Errorf(
+			"user ID is empty",
+		)
+	}
+
+	browserContainerName :=
+		BrowserName(userID)
 
 	log.Printf(
 		"User %s browser container: %s",
@@ -148,11 +234,13 @@ func InitBrowser(
 		browserContainerName,
 	)
 
-	// Check whether this user's browser container already exists.
-	_, err = dockerClient.ContainerInspect(
-		context.Background(),
-		browserContainerName,
-	)
+	// Check whether this user's browser container
+	// already exists.
+	_, err :=
+		dockerClient.ContainerInspect(
+			context.Background(),
+			browserContainerName,
+		)
 
 	if err == nil {
 		log.Printf(
@@ -171,46 +259,55 @@ func InitBrowser(
 		)
 	}
 
-	portBinding := nat.Port(
-		fmt.Sprintf(
-			"%s/tcp",
-			port,
-		),
-	)
+	portBinding :=
+		nat.Port(
+			fmt.Sprintf(
+				"%s/tcp",
+				port,
+			),
+		)
 
-	_, err = SpawnContainer(
-		context.Background(),
-		browserContainerName,
-		&container.Config{
-			Image: "ghcr.io/go-rod/rod",
+	_, err =
+		SpawnContainer(
+			context.Background(),
+			browserContainerName,
+			&container.Config{
+				Image:
+					"ghcr.io/go-rod/rod",
 
-			ExposedPorts: nat.PortSet{
-				portBinding: struct{}{},
-			},
-
-			Cmd: []string{
-				"chrome",
-				"--headless",
-				"--no-sandbox",
-				fmt.Sprintf(
-					"--remote-debugging-port=%s",
-					port,
-				),
-				"--remote-debugging-address=0.0.0.0",
-			},
-		},
-		&container.HostConfig{
-			PortBindings: nat.PortMap{
-				portBinding: []nat.PortBinding{
-					{
-						HostIP:   "0.0.0.0",
-						HostPort: port,
+				ExposedPorts:
+					nat.PortSet{
+						portBinding: struct{}{},
 					},
+
+				Cmd: []string{
+					"chrome",
+					"--headless",
+					"--no-sandbox",
+					fmt.Sprintf(
+						"--remote-debugging-port=%s",
+						port,
+					),
+					"--remote-debugging-address=0.0.0.0",
 				},
 			},
-		},
-		db,
-	)
+			&container.HostConfig{
+				PortBindings:
+					nat.PortMap{
+						portBinding:
+							[]nat.PortBinding{
+								{
+									HostIP:
+										"0.0.0.0",
+
+									HostPort:
+										port,
+								},
+							},
+					},
+			},
+			db,
+		)
 
 	if err != nil {
 		return fmt.Errorf(
@@ -227,7 +324,9 @@ func InitBrowser(
 // BROWSER NAME
 // ============================================================
 
-func BrowserName(userID string) string {
+func BrowserName(
+	userID string,
+) string {
 	if userID == "" {
 		return "codel-browser"
 	}
@@ -251,7 +350,8 @@ func Content(
 		url,
 	)
 
-	page, err := loadPage()
+	page, err :=
+		loadPage()
 
 	if err != nil {
 		return "",
@@ -262,7 +362,11 @@ func Content(
 			)
 	}
 
-	err = loadUrl(page, url)
+	err =
+		loadUrl(
+			page,
+			url,
+		)
 
 	if err != nil {
 		return "",
@@ -273,11 +377,12 @@ func Content(
 			)
 	}
 
-	script, err := templates.Render(
-		assets.ScriptTemplates,
-		"scripts/content.js",
-		nil,
-	)
+	script, err :=
+		templates.Render(
+			assets.ScriptTemplates,
+			"scripts/content.js",
+			nil,
+		)
 
 	if err != nil {
 		return "",
@@ -288,9 +393,10 @@ func Content(
 			)
 	}
 
-	pageText, err := page.Eval(
-		string(script),
-	)
+	pageText, err :=
+		page.Eval(
+			string(script),
+		)
 
 	if err != nil {
 		return "",
@@ -301,10 +407,11 @@ func Content(
 			)
 	}
 
-	screenshot, err := page.Screenshot(
-		false,
-		nil,
-	)
+	screenshot, err :=
+		page.Screenshot(
+			false,
+			nil,
+		)
 
 	if err != nil {
 		return "",
@@ -350,7 +457,8 @@ func URLs(
 		url,
 	)
 
-	page, err := loadPage()
+	page, err :=
+		loadPage()
 
 	if err != nil {
 		return "",
@@ -361,7 +469,11 @@ func URLs(
 			)
 	}
 
-	err = loadUrl(page, url)
+	err =
+		loadUrl(
+			page,
+			url,
+		)
 
 	if err != nil {
 		return "",
@@ -372,11 +484,12 @@ func URLs(
 			)
 	}
 
-	script, err := templates.Render(
-		assets.ScriptTemplates,
-		"scripts/urls.js",
-		nil,
-	)
+	script, err :=
+		templates.Render(
+			assets.ScriptTemplates,
+			"scripts/urls.js",
+			nil,
+		)
 
 	if err != nil {
 		return "",
@@ -387,9 +500,10 @@ func URLs(
 			)
 	}
 
-	urls, err := page.Eval(
-		string(script),
-	)
+	urls, err :=
+		page.Eval(
+			string(script),
+		)
 
 	if err != nil {
 		return "",
@@ -400,10 +514,11 @@ func URLs(
 			)
 	}
 
-	screenshot, err := page.Screenshot(
-		true,
-		nil,
-	)
+	screenshot, err :=
+		page.Screenshot(
+			true,
+			nil,
+		)
 
 	if err != nil {
 		return "",
@@ -443,24 +558,28 @@ func writeScreenshotToFile(
 	filename string,
 	err error,
 ) {
-	filename = fmt.Sprintf(
-		"%s.png",
-		time.Now().Format(
-			"2006-01-02-15-04-05",
-		),
-	)
+	filename =
+		fmt.Sprintf(
+			"%s.png",
+			time.Now().Format(
+				"2006-01-02-15-04-05",
+			),
+		)
 
-	path := "./tmp/browser/"
+	path :=
+		"./tmp/browser/"
 
-	filepath := fmt.Sprintf(
-		"./tmp/browser/%s",
-		filename,
-	)
+	filepath :=
+		fmt.Sprintf(
+			"./tmp/browser/%s",
+			filename,
+		)
 
-	err = os.MkdirAll(
-		path,
-		os.ModePerm,
-	)
+	err =
+		os.MkdirAll(
+			path,
+			os.ModePerm,
+		)
 
 	if err != nil {
 		return "",
@@ -470,7 +589,10 @@ func writeScreenshotToFile(
 			)
 	}
 
-	file, err := os.Create(filepath)
+	file, err :=
+		os.Create(
+			filepath,
+		)
 
 	if err != nil {
 		return "",
@@ -482,7 +604,10 @@ func writeScreenshotToFile(
 
 	defer file.Close()
 
-	_, err = file.Write(screenshot)
+	_, err =
+		file.Write(
+			screenshot,
+		)
 
 	if err != nil {
 		return "",
@@ -500,33 +625,40 @@ func writeScreenshotToFile(
 // ============================================================
 
 func loadPage() (*rod.Page, error) {
-	u, err := launcher.ResolveURL("")
+	u, err :=
+		launcher.ResolveURL("")
 
 	if err != nil {
-		return nil, fmt.Errorf(
-			"error resolving url: %w",
-			err,
-		)
+		return nil,
+			fmt.Errorf(
+				"error resolving url: %w",
+				err,
+			)
 	}
 
-	browser := rod.New().ControlURL(u)
+	browser :=
+		rod.New().ControlURL(u)
 
-	err = browser.Connect()
+	err =
+		browser.Connect()
 
 	if err != nil {
-		return nil, fmt.Errorf(
-			"error connecting to browser: %w",
-			err,
-		)
+		return nil,
+			fmt.Errorf(
+				"error connecting to browser: %w",
+				err,
+			)
 	}
 
-	version, err := browser.Version()
+	version, err :=
+		browser.Version()
 
 	if err != nil {
-		return nil, fmt.Errorf(
-			"error getting browser version: %w",
-			err,
-		)
+		return nil,
+			fmt.Errorf(
+				"error getting browser version: %w",
+				err,
+			)
 	}
 
 	log.Printf(
@@ -534,15 +666,17 @@ func loadPage() (*rod.Page, error) {
 		version.Product,
 	)
 
-	page, err := browser.Page(
-		proto.TargetCreateTarget{},
-	)
+	page, err :=
+		browser.Page(
+			proto.TargetCreateTarget{},
+		)
 
 	if err != nil {
-		return nil, fmt.Errorf(
-			"error opening page: %w",
-			err,
-		)
+		return nil,
+			fmt.Errorf(
+				"error opening page: %w",
+				err,
+			)
 	}
 
 	return page, nil
@@ -599,10 +733,11 @@ func loadUrl(
 		)
 	}
 
-	err = page.WaitDOMStable(
-		time.Second*1,
-		5,
-	)
+	err =
+		page.WaitDOMStable(
+			time.Second*1,
+			5,
+		)
 
 	if err != nil {
 		return fmt.Errorf(

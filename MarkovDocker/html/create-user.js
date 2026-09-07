@@ -30,26 +30,30 @@ app.post('/', async (req, res) => {
   }
 
   const source = '/usr/share/nginx/html';
-  const destination = `/usr/share/nginx/${safeUserId}/html`;
+  const destination = `/usr/share/nginx/user-${safeUserId}/html`;
 
   console.log('Source:', source);
   console.log('Destination:', destination);
 
   try {
-    // Create /usr/share/nginx/<user-id>/html
     await fs.promises.mkdir(destination, {
       recursive: true
     });
 
     console.log('Destination directory created');
 
-    // Copy everything in /usr/share/nginx/html
-    // into /usr/share/nginx/<user-id>/html
-    await fs.promises.cp(source, destination, {
-      recursive: true
-    });
+    const entries = await fs.promises.readdir(source);
 
-    console.log(`Successfully copied ${source} -> ${destination}`);
+    for (const entry of entries) {
+      const sourcePath = `${source}/${entry}`;
+      const destinationPath = `${destination}/${entry}`;
+
+      await fs.promises.cp(sourcePath, destinationPath, {
+        recursive: true
+      });
+    }
+
+    console.log(`Successfully copied contents of ${source} -> ${destination}`);
 
     return res.status(200).json({
       success: true,
@@ -71,7 +75,7 @@ app.post('/', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`========================================`);
-  console.log(`User creation API listening on 0.0.0.0:${PORT}`);
-  console.log(`========================================`);
+  console.log('========================================');
+  console.log('User creation API listening on 0.0.0.0:4001');
+  console.log('========================================');
 });

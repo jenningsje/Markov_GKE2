@@ -4,17 +4,25 @@ metadata:
   name: simulator
 spec:
   replicas: 1
+
   selector:
     matchLabels:
       app: simulator
+
   template:
     metadata:
       labels:
         app: simulator
+
     spec:
       containers:
-      - name: simulator
-        image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/simulatorapp:v57
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
+        - name: simulator
+          image: us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/simulatorapp:v12
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 80
+
+            - name: api
+              containerPort: 4001

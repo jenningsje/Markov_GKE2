@@ -59,6 +59,21 @@ const CODEL_IMAGE =
 
 
 // ============================================================
+// KUBERNETES ERROR HELPER
+// ============================================================
+
+function getKubernetesStatusCode(err) {
+  return (
+    err?.statusCode ??
+    err?.code ??
+    err?.response?.statusCode ??
+    err?.response?.body?.code ??
+    err?.body?.code
+  );
+}
+
+
+// ============================================================
 // AUTHENTICATION
 // ============================================================
 
@@ -624,6 +639,34 @@ function getUserVolumes() {
 
 
 // ============================================================
+// LIGHTDOCK VOLUME MOUNT
+//
+// Lightdock MUST see the entire PVC.
+//
+// This gives Lightdock:
+//
+// /mount/user-1/input
+// /mount/user-1/output
+// /mount/user-2/input
+// /mount/user-2/output
+// etc.
+//
+// The Lightdock process itself selects its user
+// directory using the user ID.
+// ============================================================
+
+function getLightdockVolumeMount() {
+  return {
+    name:
+      'markov-app',
+
+    mountPath:
+      '/opt/app/MarkovProprietary/pipelinestages/app/mount'
+  };
+}
+
+
+// ============================================================
 // CODEL DOCKER SOCKET
 // ============================================================
 
@@ -740,14 +783,24 @@ async function ensureUserAppDeployment(
    * Codel is the ONLY application that gets
    * access to the host Docker socket.
    */
-  if (appName === 'codel') {
-    desiredVolumeMounts = getCodelVolumeMounts(userId);
-    desiredVolumes = getCodelVolumes();
+  if (
+    appName === 'codel'
+  ) {
+    desiredVolumeMounts =
+      getCodelVolumeMounts(
+        userId
+      );
+
+    desiredVolumes =
+      getCodelVolumes();
 
     desiredEnv = [
       {
-        name: 'CODEL_BROWSER_NAME',
-        value: `codel-browser-${userId}`
+        name:
+          'CODEL_BROWSER_NAME',
+
+        value:
+          `codel-browser-${userId}`
       }
     ];
 
@@ -761,27 +814,37 @@ async function ensureUserAppDeployment(
   }
 
   try {
-    let existingDeployment;
+    let existingDeployment =
+      null;
 
     try {
       const result =
-        await k8sAppsApi.readNamespacedDeployment(
-          {
-            name,
-            namespace:
-              NAMESPACE
-          }
-        );
+        await k8sAppsApi.readNamespacedDeployment({
+          name,
+          namespace:
+            NAMESPACE
+        });
 
       existingDeployment =
         result.body;
 
     } catch (err) {
+      const statusCode =
+        getKubernetesStatusCode(
+          err
+        );
+
+      console.log(
+        `[USER ${userId}] read deployment ${name} status=${statusCode}`
+      );
+
       if (
-        err.statusCode === 404
+        Number(statusCode) ===
+        404
       ) {
         existingDeployment =
           null;
+
       } else {
         throw err;
       }
@@ -803,6 +866,7 @@ async function ensureUserAppDeployment(
 
         metadata: {
           name,
+
           namespace:
             NAMESPACE,
 
@@ -811,7 +875,8 @@ async function ensureUserAppDeployment(
         },
 
         spec: {
-          replicas: 1,
+          replicas:
+            1,
 
           selector: {
             matchLabels:
@@ -857,19 +922,41 @@ async function ensureUserAppDeployment(
         }
       };
 
-      await k8sAppsApi.createNamespacedDeployment(
-        {
+      try {
+        await k8sAppsApi.createNamespacedDeployment({
           namespace:
             NAMESPACE,
 
           body:
             deploymentManifest
-        }
-      );
+        });
 
-      console.log(
-        `[USER ${userId}] Deployment ${name} created`
-      );
+        console.log(
+          `[USER ${userId}] Deployment ${name} created`
+        );
+
+      } catch (createErr) {
+        const statusCode =
+          getKubernetesStatusCode(
+            createErr
+          );
+
+        /*
+         * Protect against a race where another
+         * provisioning request creates the deployment
+         * between our READ and CREATE.
+         */
+        if (
+          Number(statusCode) ===
+          409
+        ) {
+          console.log(
+            `[USER ${userId}] Deployment ${name} was created concurrently; continuing`
+          );
+        } else {
+          throw createErr;
+        }
+      }
 
     } else {
       const existingPodSpec =
@@ -1009,8 +1096,10 @@ async function ensureUserAppDeployment(
       }
 
       const needsCorrection =
-        existingReplicas !== 1 ||
-        existingImage !== imageName ||
+        existingReplicas !==
+          1 ||
+        existingImage !==
+          imageName ||
         existingNodeName !==
           MARKOV_WORKER_NODE ||
         existingSubPath !==
@@ -1047,8 +1136,10 @@ async function ensureUserAppDeployment(
           `[USER ${userId}] RECONCILING ${name}`
         );
 
-        existingDeployment.spec.replicas =
-          1;
+        existingDeployment
+          .spec
+          .replicas =
+            1;
 
         existingDeployment
           .spec
@@ -1108,16 +1199,15 @@ async function ensureUserAppDeployment(
           .labels =
             labelSelector;
 
-        await k8sAppsApi.replaceNamespacedDeployment(
-          {
-            name,
-            namespace:
-              NAMESPACE,
+        await k8sAppsApi.replaceNamespacedDeployment({
+          name,
 
-            body:
-              existingDeployment
-          }
-        );
+          namespace:
+            NAMESPACE,
+
+          body:
+            existingDeployment
+        });
 
         console.log(
           `[USER ${userId}] ${name} reconciled`
@@ -1130,27 +1220,39 @@ async function ensureUserAppDeployment(
       }
     }
 
-    /*
-     * Ensure Service exists and is correct.
-     */
-    let existingService = null;
+
+    // ========================================================
+    // ENSURE SERVICE EXISTS AND IS CORRECT
+    // ========================================================
+
+    let existingService =
+      null;
 
     try {
       const result =
-        await k8sApi.readNamespacedService(
-          {
-            name,
-            namespace:
-              NAMESPACE
-          }
-        );
+        await k8sApi.readNamespacedService({
+          name,
+
+          namespace:
+            NAMESPACE
+        });
 
       existingService =
         result.body;
 
     } catch (err) {
+      const statusCode =
+        getKubernetesStatusCode(
+          err
+        );
+
+      console.log(
+        `[USER ${userId}] read service ${name} status=${statusCode}`
+      );
+
       if (
-        err.statusCode !== 404
+        Number(statusCode) !==
+        404
       ) {
         throw err;
       }
@@ -1168,6 +1270,7 @@ async function ensureUserAppDeployment(
 
         metadata: {
           name,
+
           namespace:
             NAMESPACE
         },
@@ -1189,23 +1292,26 @@ async function ensureUserAppDeployment(
       };
 
       try {
-        await k8sApi.createNamespacedService(
-          {
-            namespace:
-              NAMESPACE,
+        await k8sApi.createNamespacedService({
+          namespace:
+            NAMESPACE,
 
-            body:
-              serviceManifest
-          }
-        );
+          body:
+            serviceManifest
+        });
 
         console.log(
           `[USER ${userId}] Service ${name} created`
         );
 
       } catch (serviceErr) {
+        const statusCode =
+          getKubernetesStatusCode(
+            serviceErr
+          );
+
         if (
-          serviceErr.statusCode ===
+          Number(statusCode) ===
           409
         ) {
           console.log(
@@ -1262,16 +1368,15 @@ async function ensureUserAppDeployment(
           }
         ];
 
-        await k8sApi.replaceNamespacedService(
-          {
-            name,
-            namespace:
-              NAMESPACE,
+        await k8sApi.replaceNamespacedService({
+          name,
 
-            body:
-              existingService
-          }
-        );
+          namespace:
+            NAMESPACE,
+
+          body:
+            existingService
+        });
       }
 
       console.log(
@@ -1286,13 +1391,16 @@ async function ensureUserAppDeployment(
 
     console.error(
       'Kubernetes status code:',
-      err.statusCode ||
+      getKubernetesStatusCode(
+        err
+      ) ||
         'unknown'
     );
 
     console.error(
       'Kubernetes response body:',
       err.body ||
+        err.response?.body ||
         'none'
     );
 
@@ -1303,67 +1411,210 @@ async function ensureUserAppDeployment(
 
 // ============================================================
 // PERSISTENT LIGHTDOCK WORKER
-// IMPORTANT: THIS FUNCTION TAKES ONLY userId.
-// THERE IS NO appName HERE.
+//
+// IMPORTANT:
+// Lightdock receives ONLY userId.
+//
+// It mounts the ENTIRE markov-app PVC.
 // ============================================================
 
-async function ensureUserLightdockDeployment(userId) {
-  const appName = 'lightdock';
+async function ensureUserLightdockDeployment(
+  userId
+) {
+  const appName =
+    'lightdock';
 
-  const name = `${appName}-${userId}`.toLowerCase();
+  const name =
+    `${appName}-${userId}`.toLowerCase();
 
-  const desiredImage = LIGHTDOCK_IMAGE;
+  const desiredImage =
+    LIGHTDOCK_IMAGE;
 
+  /*
+   * IMPORTANT:
+   * Use the Lightdock virtualenv.
+   */
   const desiredCommand = [
-    'python',
+    '/opt/app/lightdock/venv/bin/python',
     'Run_Markov.py',
     userId.toString()
   ];
 
+  /*
+   * IMPORTANT:
+   * Lightdock must mount the ENTIRE PVC.
+   *
+   * DO NOT use getUserVolumeMount(userId)
+   * because that applies subPath=user-${userId}.
+   */
   const desiredVolumeMounts = [
-    getUserVolumeMount(userId)
+    getLightdockVolumeMount()
   ];
 
-  const desiredVolumes = getUserVolumes();
+  const desiredVolumes =
+    getUserVolumes();
 
   console.log('');
-  console.log('============================================================');
-  console.log(`[USER ${userId}] ENSURE LIGHTDOCK: ${name}`);
-  console.log(`[USER ${userId}] Image: ${desiredImage}`);
-  console.log(`[USER ${userId}] Command: ${desiredCommand.join(' ')}`);
-  console.log(`[USER ${userId}] Workspace: user-${userId}`);
-  console.log(`[USER ${userId}] Node: ${MARKOV_WORKER_NODE}`);
-  console.log('============================================================');
 
-  const existing = await getKubernetesObject(
-    appsV1Api.readNamespacedDeployment,
-    name
+  console.log(
+    '============================================================'
   );
 
-  if (existing) {
-    console.log(`[USER ${userId}] ${name} exists`);
+  console.log(
+    `[USER ${userId}] ENSURE LIGHTDOCK: ${name}`
+  );
+
+  console.log(
+    `[USER ${userId}] Image: ${desiredImage}`
+  );
+
+  console.log(
+    `[USER ${userId}] Command: ${desiredCommand.join(' ')}`
+  );
+
+  console.log(
+    `[USER ${userId}] Workspace: user-${userId}`
+  );
+
+  console.log(
+    `[USER ${userId}] Node: ${MARKOV_WORKER_NODE}`
+  );
+
+  console.log(
+    '============================================================'
+  );
+
+  let existing =
+    null;
+
+  try {
+    const result =
+      await k8sAppsApi.readNamespacedDeployment({
+        name,
+
+        namespace:
+          NAMESPACE
+      });
+
+    existing =
+      result.body;
+
+  } catch (err) {
+    const statusCode =
+      getKubernetesStatusCode(
+        err
+      );
+
+    console.log(
+      `[USER ${userId}] read deployment ${name} status=${statusCode}`
+    );
+
+    if (
+      Number(statusCode) !==
+      404
+    ) {
+      throw err;
+    }
+  }
+
+
+  // ==========================================================
+  // CHECK EXISTING LIGHTDOCK
+  // ==========================================================
+
+  if (
+    existing
+  ) {
+    console.log(
+      `[USER ${userId}] ${name} exists`
+    );
+
+    const currentContainer =
+      existing
+        .spec
+        ?.template
+        ?.spec
+        ?.containers
+        ?.[0];
 
     const currentImage =
-      existing.spec?.template?.spec?.containers?.[0]?.image;
+      currentContainer
+        ?.image;
 
     const currentCommand =
-      existing.spec?.template?.spec?.containers?.[0]?.command || [];
+      currentContainer
+        ?.command ||
+      [];
 
-    const currentNode =
-      existing.spec?.template?.spec?.nodeSelector?.['kubernetes.io/hostname'];
+    const currentNodeName =
+      existing
+        .spec
+        ?.template
+        ?.spec
+        ?.nodeName;
+
+    const currentMount =
+      currentContainer
+        ?.volumeMounts
+        ?.find(
+          mount =>
+            mount.name ===
+            'markov-app'
+        );
+
+    const currentMountPath =
+      currentMount
+        ?.mountPath;
+
+    const currentSubPath =
+      currentMount
+        ?.subPath;
+
+    const desiredMountPath =
+      '/opt/app/MarkovProprietary/pipelinestages/app/mount';
 
     console.log(
       `[USER ${userId}] image=${currentImage}`
     );
 
     console.log(
-      `[USER ${userId}] node=${currentNode}`
+      `[USER ${userId}] command=${JSON.stringify(currentCommand)}`
     );
 
+    console.log(
+      `[USER ${userId}] node=${currentNodeName}`
+    );
+
+    console.log(
+      `[USER ${userId}] mountPath=${currentMountPath}`
+    );
+
+    console.log(
+      `[USER ${userId}] subPath=${currentSubPath || '<none>'}`
+    );
+
+    const needsCorrection =
+      currentImage !==
+        desiredImage ||
+
+      JSON.stringify(
+        currentCommand
+      ) !==
+        JSON.stringify(
+          desiredCommand
+        ) ||
+
+      currentNodeName !==
+        MARKOV_WORKER_NODE ||
+
+      currentMountPath !==
+        desiredMountPath ||
+
+      currentSubPath !==
+        undefined;
+
     if (
-      currentImage === desiredImage &&
-      JSON.stringify(currentCommand) === JSON.stringify(desiredCommand) &&
-      currentNode === MARKOV_WORKER_NODE
+      !needsCorrection
     ) {
       console.log(
         `[USER ${userId}] ${name} already correct`
@@ -1371,110 +1622,188 @@ async function ensureUserLightdockDeployment(userId) {
 
       return;
     }
+
+    console.log(
+      `[USER ${userId}] RECONCILING ${name}`
+    );
   }
 
+
+  // ==========================================================
+  // LIGHTDOCK DEPLOYMENT MANIFEST
+  // ==========================================================
+
   const deployment = {
-    apiVersion: 'apps/v1',
-    kind: 'Deployment',
+    apiVersion:
+      'apps/v1',
+
+    kind:
+      'Deployment',
 
     metadata: {
       name,
+
+      namespace:
+        NAMESPACE,
+
       labels: {
-        app: name,
-        'io.kompose.service': name
+        app:
+          name,
+
+        user:
+          userId.toString()
       }
     },
 
     spec: {
-      replicas: 1,
+      replicas:
+        1,
 
       strategy: {
-        type: 'Recreate'
+        type:
+          'Recreate'
       },
 
       selector: {
         matchLabels: {
-          app: name
+          app:
+            name
         }
       },
 
       template: {
         metadata: {
           labels: {
-            app: name,
-            'io.kompose.service': name
+            app:
+              name,
+
+            user:
+              userId.toString()
           }
         },
 
         spec: {
-          nodeSelector: {
-            workload: 'markov',
-            'kubernetes.io/arch': 'amd64',
-            'kubernetes.io/hostname': MARKOV_WORKER_NODE
-          },
+          nodeName:
+            MARKOV_WORKER_NODE,
 
           containers: [
             {
-              name: appName,
-              image: desiredImage,
+              name:
+                appName,
 
-              command: desiredCommand,
+              image:
+                desiredImage,
+
+              command:
+                desiredCommand,
 
               env: [
                 {
-                  name: 'JWT_SECRET',
-                  value: JWT_SECRET
+                  name:
+                    'JWT_SECRET',
+
+                  value:
+                    JWT_SECRET
                 }
               ],
 
               resources: {
                 requests: {
-                  cpu: '4',
-                  memory: '12Gi'
+                  cpu:
+                    '4',
+
+                  memory:
+                    '12Gi'
                 },
+
                 limits: {
-                  cpu: '4',
-                  memory: '12Gi'
+                  cpu:
+                    '4',
+
+                  memory:
+                    '12Gi'
                 }
               },
 
-              volumeMounts: desiredVolumeMounts
+              volumeMounts:
+                desiredVolumeMounts
             }
           ],
 
-          volumes: desiredVolumes,
+          volumes:
+            desiredVolumes,
 
-          restartPolicy: 'Always'
+          restartPolicy:
+            'Always'
         }
       }
     }
   };
 
-  if (existing) {
+
+  // ==========================================================
+  // CREATE OR REPLACE LIGHTDOCK
+  // ==========================================================
+
+  if (
+    existing
+  ) {
     console.log(
       `[USER ${userId}] Updating ${name}`
     );
 
-    await appsV1Api.replaceNamespacedDeployment(
+    await k8sAppsApi.replaceNamespacedDeployment({
       name,
-      K8S_NAMESPACE,
-      deployment
-    );
+
+      namespace:
+        NAMESPACE,
+
+      body:
+        deployment
+    });
+
   } else {
     console.log(
       `[USER ${userId}] Creating ${name}`
     );
 
-    await appsV1Api.createNamespacedDeployment(
-      K8S_NAMESPACE,
-      deployment
-    );
+    try {
+      await k8sAppsApi.createNamespacedDeployment({
+        namespace:
+          NAMESPACE,
+
+        body:
+          deployment
+      });
+
+    } catch (err) {
+      const statusCode =
+        getKubernetesStatusCode(
+          err
+        );
+
+      /*
+       * Protect against a race between
+       * read and create.
+       */
+      if (
+        Number(statusCode) ===
+        409
+      ) {
+        console.log(
+          `[USER ${userId}] ${name} was created concurrently`
+        );
+      } else {
+        throw err;
+      }
+    }
   }
 
   console.log(
     `[USER ${userId}] ${name} deployment reconciled`
   );
 }
+
 
 // ============================================================
 // COMPLETE USER ENVIRONMENT
@@ -1552,9 +1881,10 @@ async function provisionUserEnvironment(
   );
 
   /*
-   * CRITICAL:
-   * Lightdock is independent of ensureUserAppDeployment().
-   * Do NOT pass appName.
+   * Lightdock is independent of
+   * ensureUserAppDeployment().
+   *
+   * It receives ONLY userId.
    */
   await ensureUserLightdockDeployment(
     userId
@@ -1616,7 +1946,9 @@ app.post(
       );
 
       res.json({
-        ok: true,
+        ok:
+          true,
+
         user_id:
           userId
       });
@@ -1693,13 +2025,17 @@ app.post(
 
       await fs.promises.writeFile(
         file,
-        content || ''
+        content ||
+          ''
       );
 
       res.json({
-        ok: true,
+        ok:
+          true,
+
         user_id:
           userId,
+
         filename:
           safeFilename
       });
@@ -1753,7 +2089,9 @@ app.get(
       );
 
     if (
-      !fs.existsSync(file)
+      !fs.existsSync(
+        file
+      )
     ) {
       return res.status(404).send(
         'Not found'
@@ -1787,7 +2125,9 @@ app.get(
       );
 
     if (
-      !fs.existsSync(file)
+      !fs.existsSync(
+        file
+      )
     ) {
       return res.status(404).send(
         'Not found'
@@ -1830,7 +2170,8 @@ app.get(
       );
 
       return res.status(200).json({
-        ok: true
+        ok:
+          true
       });
 
     } catch (err) {
@@ -1880,7 +2221,8 @@ app.post(
       );
 
       res.json({
-        ok: true,
+        ok:
+          true,
 
         message:
           'User-specific apps and persistent simulation worker ready',
@@ -1891,8 +2233,10 @@ app.post(
         endpoints: {
           codel:
             '/codel/',
+
           viewer:
             '/viewer/',
+
           download:
             '/download/'
         }
@@ -1909,13 +2253,16 @@ app.post(
 
       console.error(
         'Kubernetes status code:',
-        err.statusCode ||
+        getKubernetesStatusCode(
+          err
+        ) ||
           'unknown'
       );
 
       console.error(
         'Kubernetes response body:',
         err.body ||
+          err.response?.body ||
           'none'
       );
 

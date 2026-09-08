@@ -2192,97 +2192,71 @@ app.post(
   '/html',
   authenticateToken,
   async (req, res) => {
-    const userId =
-      req.user.id;
+    const userId = req.user.id;
+    const { query } = req.body;
 
-    console.log(
-      '============================================================'
-    );
+    console.log('============================================================');
+    console.log('POST /html REACHED');
+    console.log(`Authenticated user ID: ${userId}`);
+    console.log('Received query:', query);
+    console.log('============================================================');
 
-    console.log(
-      'POST /html REACHED'
-    );
-
-    console.log(
-      `Authenticated user ID: ${userId}`
-    );
-
-    console.log(
-      `[USER ${userId}] Ensuring complete persistent environment`
-    );
-
-    console.log(
-      '============================================================'
-    );
+    if (
+      typeof query !== 'string' ||
+      !query.trim()
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: 'query is required'
+      });
+    }
 
     try {
-      await provisionUserEnvironment(
-        userId
+      const workspace =
+        await ensureUserWorkspace(userId);
+
+      const inputDir =
+        workspace.input;
+
+      /*
+       * Store the submitted protein names/query
+       * in the authenticated user's input directory.
+       */
+      const namesPath =
+        path.join(
+          inputDir,
+          'names.txt'
+        );
+
+      await fs.promises.writeFile(
+        namesPath,
+        query.trim()
       );
 
-      res.json({
-        ok:
-          true,
+      console.log(
+        `[USER ${userId}] Wrote query to ${namesPath}`
+      );
 
-        message:
-          'User-specific apps and persistent simulation worker ready',
-
-        user_id:
-          userId,
-
-        endpoints: {
-          codel:
-            '/codel/',
-
-          viewer:
-            '/viewer/',
-
-          download:
-            '/download/'
-        }
+      return res.json({
+        ok: true,
+        user_id: userId,
+        query: query.trim(),
+        file: namesPath
       });
 
     } catch (err) {
       console.error(
-        '============================================================'
-      );
-
-      console.error(
-        `[USER ${userId}] FAILED TO PROVISION USER ENVIRONMENT`
-      );
-
-      console.error(
-        'Kubernetes status code:',
-        getKubernetesStatusCode(
-          err
-        ) ||
-          'unknown'
-      );
-
-      console.error(
-        'Kubernetes response body:',
-        err.body ||
-          err.response?.body ||
-          'none'
-      );
-
-      console.error(
-        'Full error:',
+        `[USER ${userId}] Failed to write query:`,
         err
       );
 
-      console.error(
-        '============================================================'
-      );
-
       return res.status(500).json({
-        error:
-          'Failed to provision isolated user stack'
+        ok: false,
+        error: 'failed to write query'
       });
     }
   }
 );
-
 
 // ============================================================
 // START

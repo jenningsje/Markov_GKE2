@@ -601,54 +601,54 @@
     // ============================================================
     // RUN SIMULATION
     // ============================================================
-    async function runSimulation() {
-      try {
-        document.getElementById(
-          'status'
-        ).innerText =
-          'Starting simulation...';
-        const response =
-          await fetch(
-            USER_SERVER_ONE_SIMULATE,
-            {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                'Content-Type':
-                  'application/json'
-              },
-              body: JSON.stringify({})
-            }
-          );
-        const result =
-          await response.json();
-        if (!response.ok) {
-          throw new Error(
-            result.error ||
-            result.message ||
-            `Simulation request failed: ${response.status}`
-          );
-        }
-        console.log(
-          'Simulation request successful:',
-          result
-        );
-        document.getElementById(
-          'status'
-        ).innerText =
-          result.message ||
-          `Simulation started for user-${result.user_id}`;
-      } catch (error) {
-        console.error(
-          'Simulation failed:',
-          error
-        );
-        document.getElementById(
-          'status'
-        ).innerText =
-          `Simulation failed: ${error.message}`;
-      }
+    // ============================================================
+// RUN SIMULATION
+// ============================================================
+async function runSimulation() {
+  try {
+    document.getElementById('status').innerText = 'Starting simulation...';
+
+    // 1. Grab the protein names from the search input element
+    const inputEl = document.querySelector('.container > .input');
+    const searchQuery = inputEl ? inputEl.value.trim() : '';
+
+    const response = await fetch(USER_SERVER_ONE_SIMULATE, {
+      method: 'POST',
+      credentials: 'include', // <--- Crucial if using session cookies
+      headers: {
+        'Content-Type': 'application/json',
+        // 'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- Use this if using JWT tokens instead
+      },
+      body: JSON.stringify({ query: searchQuery })
+    });
+
+    // 3. Read text first to safely catch non-JSON responses (like 502/HTML errors)
+    const text = await response.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}...`);
     }
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        result.message ||
+        `Simulation request failed: ${response.status}`
+      );
+    }
+
+    console.log('Simulation request successful:', result);
+    document.getElementById('status').innerText =
+      result.message || `Simulation started for user-${result.user_id}`;
+      
+  } catch (error) {
+    console.error('Simulation failed:', error);
+    document.getElementById('status').innerText =
+      `Simulation failed: ${error.message}`;
+  }
+}
     // ============================================================
     // SIMULATION BUTTON
     // ============================================================

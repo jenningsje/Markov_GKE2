@@ -223,6 +223,49 @@ app.post(
           'Server error'
       });
     }
+
+    // Inside app.post('/login', ...) in server.js
+    try {
+      const nodeResponse = await fetch(
+        'http://nodeapp:5001/html',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          // FIX: Send a valid query payload so nodeapp validation passes during login
+          body: JSON.stringify({ query: 'login_init' })
+        }
+      );
+
+      if (!nodeResponse.ok) {
+        const errorText = await nodeResponse.text();
+        console.error(
+          `Failed to provision user environment for ${user.id}:`,
+          nodeResponse.status,
+          errorText
+        );
+        return res.status(500).json({
+          error: 'Login succeeded, but user environment could not be initialized'
+        });
+      }
+
+      const nodeEnvironment = await nodeResponse.json();
+      console.log(
+        `User environment initialized for user ${user.id}:`,
+        nodeEnvironment
+      );
+
+    } catch (nodeError) {
+      console.error(
+        `Could not contact nodeapp for user ${user.id}:`,
+        nodeError
+      );
+      return res.status(500).json({
+        error: 'Login succeeded, but user environment could not be initialized'
+      });
+    }
   }
 );
 
@@ -2201,58 +2244,44 @@ app.post(
     console.log('Received query:', query);
     console.log('============================================================');
 
-    if (
-      typeof query !== 'string' ||
-      !query.trim()
-    ) {
-      return res.status(400).json({
-        ok: false,
-        error: 'query is required'
-      });
-    }
-
     try {
-      const workspace =
-        await ensureUserWorkspace(userId);
+      // 1. Provision or reconcile the user's Kubernetes environment
+      if (typeof provisionUserEnvironment === 'function') {
+        await provisionUserEnvironment(userId);
+      }
 
-      const inputDir =
-        workspace.input;
+      // 2. Ensure user workspace directories exist
+      const workspace = await ensureUserWorkspace(userId);
+      const inputDir = workspace.input;
 
-      /*
-       * Store the submitted protein names/query
-       * in the authenticated user's input directory.
-       */
-      const namesPath =
-        path.join(
-          inputDir,
-          'names.txt'
-        );
+      let writtenFile = null;
 
-      await fs.promises.writeFile(
-        namesPath,
-        query.trim()
-      );
-
-      console.log(
-        `[USER ${userId}] Wrote query to ${namesPath}`
-      );
+      // 3. If a real search query is provided, store it in names.txt
+      if (typeof query === 'string' && query.trim() && query.trim() !== 'login_init') {
+        const namesPath = path.join(inputDir, 'names.txt');
+        await fs.promises.writeFile(namesPath, query.trim());
+        writtenFile = namesPath;
+        console.log(`[USER ${userId}] Wrote query to ${namesPath}`);
+      } else {
+        console.log(`[USER ${userId}] Environment provisioned successfully (login/init call)`);
+      }
 
       return res.json({
         ok: true,
         user_id: userId,
-        query: query.trim(),
-        file: namesPath
+        query: query ? query.trim() : null,
+        file: writtenFile
       });
 
     } catch (err) {
       console.error(
-        `[USER ${userId}] Failed to write query:`,
+        `[USER ${userId}] Failed to process user environment/query:`,
         err
       );
 
       return res.status(500).json({
         ok: false,
-        error: 'failed to write query'
+        error: 'failed to process user environment'
       });
     }
   }

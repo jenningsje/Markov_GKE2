@@ -65,6 +65,50 @@ function checkRole(roles) {
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
+  // Inside app.post('/login', ...) in server.js
+
+  try {
+    const nodeResponse = await fetch(
+      'http://nodeapp:5001/html',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        // FIX: Send a valid query payload so nodeapp validation passes during login
+        body: JSON.stringify({ query: 'login_init' })
+      }
+    );
+
+    if (!nodeResponse.ok) {
+      const errorText = await nodeResponse.text();
+      console.error(
+        `Failed to provision user environment for ${user.id}:`,
+        nodeResponse.status,
+        errorText
+      );
+      return res.status(500).json({
+        error: 'Login succeeded, but user environment could not be initialized'
+      });
+    }
+
+    const nodeEnvironment = await nodeResponse.json();
+    console.log(
+      `User environment initialized for user ${user.id}:`,
+      nodeEnvironment
+    );
+
+  } catch (nodeError) {
+    console.error(
+      `Could not contact nodeapp for user ${user.id}:`,
+      nodeError
+    );
+    return res.status(500).json({
+      error: 'Login succeeded, but user environment could not be initialized'
+    });
+  }
+
   try {
     const result = await db.query(
       'SELECT * FROM users WHERE email = $1',

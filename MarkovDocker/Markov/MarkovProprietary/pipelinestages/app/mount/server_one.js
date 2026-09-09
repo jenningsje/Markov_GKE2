@@ -1499,6 +1499,21 @@ async function ensureUserLightdockDeployment(
         ?.command ||
       [];
 
+    // IMPORTANT:
+    // The previous version of this code did NOT check
+    // existing.spec.replicas.
+    //
+    // If lightdock-3 had accidentally been scaled to hundreds
+    // of replicas, the old code considered the Deployment
+    // "correct" and returned without changing the replica count.
+    //
+    // Kubernetes then continued creating Pods to satisfy that
+    // desired replica count.
+    const currentReplicas =
+      existing
+        .spec
+        ?.replicas;
+
     const currentNodeName =
       existing
         .spec
@@ -1527,6 +1542,10 @@ async function ensureUserLightdockDeployment(
       '/opt/app/MarkovProprietary/pipelinestages/app/mount';
 
     console.log(
+      `[USER ${userId}] replicas=${currentReplicas}`
+    );
+
+    console.log(
       `[USER ${userId}] image=${currentImage}`
     );
 
@@ -1546,7 +1565,19 @@ async function ensureUserLightdockDeployment(
       `[USER ${userId}] subPath=${currentSubPath || '<none>'}`
     );
 
+    // ========================================================
+    // IMPORTANT FIX
+    //
+    // Lightdock MUST have exactly ONE replica.
+    //
+    // If the Deployment has any other replica count, force
+    // reconciliation even when every other field is correct.
+    // ========================================================
+
     const needsCorrection =
+      currentReplicas !==
+        1 ||
+
       currentImage !==
         desiredImage ||
 
@@ -1579,6 +1610,15 @@ async function ensureUserLightdockDeployment(
     console.log(
       `[USER ${userId}] RECONCILING ${name}`
     );
+
+    if (
+      currentReplicas !==
+      1
+    ) {
+      console.log(
+        `[USER ${userId}] FIXING REPLICAS: ${currentReplicas} -> 1`
+      );
+    }
   }
 
 
@@ -1609,6 +1649,9 @@ async function ensureUserLightdockDeployment(
     },
 
     spec: {
+      // ======================================================
+      // LIGHTDOCK IS ALWAYS EXACTLY ONE REPLICA
+      // ======================================================
       replicas:
         1,
 
@@ -1705,6 +1748,10 @@ async function ensureUserLightdockDeployment(
       `[USER ${userId}] Updating ${name}`
     );
 
+    // Explicitly guarantee that the object being sent to
+    // Kubernetes has replicas=1.
+    deployment.spec.replicas = 1;
+
     await k8sAppsApi.replaceNamespacedDeployment({
       name,
 
@@ -1749,7 +1796,7 @@ async function ensureUserLightdockDeployment(
   }
 
   console.log(
-    `[USER ${userId}] ${name} deployment reconciled`
+    `[USER ${userId}] ${name} deployment reconciled with replicas=1`
   );
 }
 
@@ -2135,28 +2182,51 @@ app.post(
   '/html',
   authenticateToken,
   async (req, res) => {
-    const userId = req.user.id;
-    const { query } = req.body;
+    const userId =
+      req.user.id;
 
-    console.log('============================================================');
-    console.log('POST /html REACHED');
-    console.log(`Authenticated user ID: ${userId}`);
-    console.log('Received query:', query);
-    console.log('============================================================');
+    const { query } =
+      req.body;
+
+    console.log(
+      '============================================================'
+    );
+
+    console.log(
+      'POST /html REACHED'
+    );
+
+    console.log(
+      `Authenticated user ID: ${userId}`
+    );
+
+    console.log(
+      'Received query:',
+      query
+    );
+
+    console.log(
+      '============================================================'
+    );
 
     if (
       typeof query !== 'string' ||
       !query.trim()
     ) {
       return res.status(400).json({
-        ok: false,
-        error: 'query is required'
+        ok:
+          false,
+
+        error:
+          'query is required'
       });
     }
 
     try {
       const workspace =
-        await ensureUserWorkspace(userId);
+        await ensureUserWorkspace(
+          userId
+        );
 
       const inputDir =
         workspace.input;
@@ -2177,10 +2247,17 @@ app.post(
       );
 
       return res.json({
-        ok: true,
-        user_id: userId,
-        query: query.trim(),
-        file: namesPath
+        ok:
+          true,
+
+        user_id:
+          userId,
+
+        query:
+          query.trim(),
+
+        file:
+          namesPath
       });
 
     } catch (err) {
@@ -2190,8 +2267,11 @@ app.post(
       );
 
       return res.status(500).json({
-        ok: false,
-        error: 'failed to write query'
+        ok:
+          false,
+
+        error:
+          'failed to write query'
       });
     }
   }

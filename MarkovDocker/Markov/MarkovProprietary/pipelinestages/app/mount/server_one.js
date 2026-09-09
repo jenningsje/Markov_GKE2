@@ -1279,13 +1279,48 @@ async function ensureUserAppDeployment(
             serviceErr
           );
 
-        if (
-          Number(statusCode) ===
-          409
-        ) {
+        if (Number(statusCode) === 409) {
           console.log(
-            `[USER ${userId}] Service ${name} already exists`
+            `[USER ${userId}] ${name} was created concurrently; re-reading`
           );
+
+          const reread =
+            await k8sAppsApi.readNamespacedDeployment({
+              name,
+              namespace: NAMESPACE
+            });
+
+          const actual =
+            reread.body;
+
+          const actualContainer =
+            actual.spec.template.spec.containers[0];
+
+          console.log(
+            `[USER ${userId}] POST-409 command: ${
+              JSON.stringify(actualContainer.command)
+            }`
+          );
+
+          console.log(
+            `[USER ${userId}] POST-409 args: ${
+              JSON.stringify(actualContainer.args)
+            }`
+          );
+
+          if (
+            JSON.stringify(actualContainer.command) !==
+              JSON.stringify(desiredCommand) ||
+
+            JSON.stringify(actualContainer.args) !==
+              JSON.stringify(desiredArgs)
+          ) {
+            await k8sAppsApi.replaceNamespacedDeployment({
+              name,
+              namespace: NAMESPACE,
+              body: deployment
+            });
+          }
         } else {
           throw serviceErr;
         }
@@ -1626,116 +1661,80 @@ async function ensureUserLightdockDeployment(
   // LIGHTDOCK DEPLOYMENT MANIFEST
   // ==========================================================
 
-  const deployment = {
-    apiVersion:
-      'apps/v1',
+const deployment = {
+  apiVersion: 'apps/v1',
 
-    kind:
-      'Deployment',
+  kind: 'Deployment',
 
-    metadata: {
-      name,
+  metadata: {
+    name,
+    namespace: NAMESPACE,
 
-      namespace:
-        NAMESPACE,
+    labels: {
+      app: name,
+      user: normalizedUserId
+    }
+  },
 
-      labels: {
-        app:
-          name,
+  spec: {
+    replicas: 1,
 
-        user:
-          userId.toString()
+    strategy: {
+      type: 'Recreate'
+    },
+
+    selector: {
+      matchLabels: {
+        app: name
       }
     },
 
-    spec: {
-      // ======================================================
-      // LIGHTDOCK IS ALWAYS EXACTLY ONE REPLICA
-      // ======================================================
-      replicas:
-        1,
-
-      strategy: {
-        type:
-          'Recreate'
-      },
-
-      selector: {
-        matchLabels: {
-          app:
-            name
+    template: {
+      metadata: {
+        labels: {
+          app: name,
+          user: normalizedUserId
         }
       },
 
-      template: {
-        metadata: {
-          labels: {
-            app:
-              name,
+      spec: {
+        nodeName: MARKOV_WORKER_NODE,
 
-            user:
-              userId.toString()
-          }
-        },
+        containers: [
+          {
+            name: appName,
 
-        spec: {
-          nodeName:
-            MARKOV_WORKER_NODE,
+            image: desiredImage,
 
-          containers: [
-            {
-              name:
-                appName,
+            command: desiredCommand,
 
-              image:
-                desiredImage,
+            args: desiredArgs,
 
-              command:
-                desiredCommand,
+            env: desiredEnv,
 
-              env: [
-                {
-                  name:
-                    'JWT_SECRET',
-
-                  value:
-                    JWT_SECRET
-                }
-              ],
-
-              resources: {
-                requests: {
-                  cpu:
-                    '4',
-
-                  memory:
-                    '12Gi'
-                },
-
-                limits: {
-                  cpu:
-                    '4',
-
-                  memory:
-                    '12Gi'
-                }
+            resources: {
+              requests: {
+                cpu: '4',
+                memory: '12Gi'
               },
 
-              volumeMounts:
-                desiredVolumeMounts
-            }
-          ],
+              limits: {
+                cpu: '4',
+                memory: '12Gi'
+              }
+            },
 
-          volumes:
-            desiredVolumes,
+            volumeMounts: desiredVolumeMounts
+          }
+        ],
 
-          restartPolicy:
-            'Always'
-        }
+        volumes: desiredVolumes,
+
+        restartPolicy: 'Always'
       }
     }
-  };
-
+  }
+};
 
   // ==========================================================
   // CREATE OR REPLACE LIGHTDOCK
@@ -1902,8 +1901,18 @@ app.post(
   '/html/simulate',
   authenticateToken,
   async (req, res) => {
-    const userId =
-      req.user.id;
+    const userId = String(req.user?.id ?? '').trim();
+
+    if (!userId) {
+      console.error(
+        'FATAL: authenticated request has no user ID'
+      );
+
+      return res.status(401).json({
+        ok: false,
+        error: 'authenticated user has no ID'
+      });
+    }
 
     try {
       const workspace =

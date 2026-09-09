@@ -1,15 +1,18 @@
 document.getElementById('runLightdock').addEventListener('submit', async function(event) {
   event.preventDefault();
 
-  const payload = { query: "sent response" };
   const statusEl = document.getElementById("status");
 
-  async function sendRequest(url, backendName) {
-    const response = await fetch(url, {
+  try {
+    const response = await fetch("/server_one/html/simulate", {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        query: "sent response"
+      })
     });
 
     if (response.status === 401 || response.status === 403) {
@@ -18,21 +21,24 @@ document.getElementById('runLightdock').addEventListener('submit', async functio
     }
 
     const text = await response.text();
+
     let data;
-    try { data = JSON.parse(text); } catch { data = text; }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
 
-    if (!response.ok) throw new Error(`${backendName} failed`);
-
-    return data;
-  }
-
-  try {
-    await sendRequest("/server_one/html/simulate", "Node server");
-    await sendRequest("/receive_signal/html/simulate", "Flask server");
+    if (!response.ok) {
+      throw new Error(
+        data?.error || data?.message || "Node server failed"
+      );
+    }
 
     statusEl.innerText = "Simulation complete";
 
   } catch (err) {
+    console.error("Simulation request failed:", err);
     statusEl.innerText = "Simulation failed: " + err.message;
   }
 });

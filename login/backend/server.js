@@ -4,17 +4,26 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+
 const app = express();
 
 const PORT = 1114;
 
-// Middleware setup
+// ============================================================
+// MIDDLEWARE
+// ============================================================
+
 app.use(cookieParser());
 app.use(express.json());
+
 app.use(cors({
   origin: true,
   credentials: true
 }));
+
+// ============================================================
+// DATABASE
+// ============================================================
 
 const db = new Pool({
   user: 'postgres',
@@ -24,112 +33,197 @@ const db = new Pool({
   port: 5432,
 });
 
-// Secret key (use environment variables in production)
+// ============================================================
+// JWT SECRET
+// ============================================================
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Authentication middleware
+if (!JWT_SECRET) {
+  console.error('WARNING: JWT_SECRET is not set');
+}
+
+// ============================================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================================
+
 function authenticateToken(req, res, next) {
-  // Check for token in cookies or Authorization header
-  const token = req.cookies.token || 
-                (req.headers.authorization && req.headers.authorization.split(' ')[1]);
-  
+
+  const token =
+    req.cookies.token ||
+    (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer ')
+        ? req.headers.authorization.split(' ')[1]
+        : null
+    );
+
   if (!token) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
-  
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Invalid or expired token' });
-  }
-}
-
-// Role checker middleware
-function checkRole(roles) {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-    
-    if (roles.includes(req.user.role)) {
-      return next();
-    }
-    
-    return res.status(403).json({ message: 'Insufficient permissions' });
-  };
-}
-
-// Login route
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  // Inside app.post('/login', ...) in server.js
-
-  try {
-    const nodeResponse = await fetch(
-      'http://nodeapp:5001/html',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        // FIX: Send a valid query payload so nodeapp validation passes during login
-        body: JSON.stringify({ query: 'login_init' })
-      }
-    );
-
-    if (!nodeResponse.ok) {
-      const errorText = await nodeResponse.text();
-      console.error(
-        `Failed to provision user environment for ${user.id}:`,
-        nodeResponse.status,
-        errorText
-      );
-      return res.status(500).json({
-        error: 'Login succeeded, but user environment could not be initialized'
-      });
-    }
-
-    const nodeEnvironment = await nodeResponse.json();
-    console.log(
-      `User environment initialized for user ${user.id}:`,
-      nodeEnvironment
-    );
-
-  } catch (nodeError) {
-    console.error(
-      `Could not contact nodeapp for user ${user.id}:`,
-      nodeError
-    );
-    return res.status(500).json({
-      error: 'Login succeeded, but user environment could not be initialized'
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
     });
   }
 
   try {
+
+    const decoded = jwt.verify(
+      token,
+      JWT_SECRET
+    );
+
+    req.user = decoded;
+
+    next();
+
+  } catch (error) {
+
+    console.error(
+      'JWT verification failed:',
+      error.message
+    );
+
+    return res.status(403).json({
+      success: false,
+      message: 'Invalid or expired token'
+    });
+  }
+}
+
+// ============================================================
+// ROLE CHECKER
+// ============================================================
+
+function checkRole(roles) {
+
+  return (req, res, next) => {
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (roles.includes(req.user.role)) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: 'Insufficient permissions'
+    });
+  };
+}
+
+// ============================================================
+// LOGIN
+// ============================================================
+
+app.post('/login', async (req, res) => {
+
+  console.log(
+    '============================================================'
+  );
+
+  console.log(
+    'POST /login REACHED'
+  );
+
+  console.log(
+    '============================================================'
+  );
+
+  const { email, password } = req.body;
+
+  console.log(
+    'Login email:',
+    email
+  );
+
+  // ==========================================================
+  // VALIDATE REQUEST
+  // ==========================================================
+
+  if (
+    typeof email !== 'string' ||
+    typeof password !== 'string' ||
+    !email.trim() ||
+    !password
+  ) {
+
+    console.log(
+      'LOGIN FAILED: missing email or password'
+    );
+
+    return res.status(400).json({
+      success: false,
+      error: 'Email and password are required'
+    });
+  }
+
+  try {
+
+    // ========================================================
+    // 1. LOOK UP USER
+    // ========================================================
+
+    console.log(
+      `Looking up user: ${email.trim()}`
+    );
+
     const result = await db.query(
       'SELECT * FROM users WHERE email = $1',
-      [email]
+      [email.trim()]
     );
 
     const user = result.rows[0];
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+
+      console.log(
+        'LOGIN FAILED: user not found'
+      );
+
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
     }
 
-    const match = await bcrypt.compare(password, user.password_hash);
+    console.log(
+      `User found: ${user.id}`
+    );
 
-    console.log("BODY:", req.body);
-    console.log("USER:", user);
-    console.log("MATCH:", match);
+    // ========================================================
+    // 2. CHECK PASSWORD
+    // ========================================================
+
+    const match = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
+
+    console.log(
+      'Password match:',
+      match
+    );
 
     if (!match) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+
+      console.log(
+        'LOGIN FAILED: invalid password'
+      );
+
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
     }
+
+    // ========================================================
+    // 3. CREATE JWT
+    // ========================================================
 
     const userPayload = {
       id: user.id,
@@ -137,9 +231,21 @@ app.post('/login', async (req, res) => {
       role: user.role || 'user'
     };
 
-    const token = jwt.sign(userPayload, JWT_SECRET, {
-      expiresIn: '1h'
-    });
+    const token = jwt.sign(
+      userPayload,
+      JWT_SECRET,
+      {
+        expiresIn: '1h'
+      }
+    );
+
+    console.log(
+      `JWT created successfully for user ${user.id}`
+    );
+
+    // ========================================================
+    // 4. SET AUTH COOKIE
+    // ========================================================
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -149,160 +255,243 @@ app.post('/login', async (req, res) => {
       maxAge: 3600000
     });
 
-    // ============================================================
-  // START USER-SPECIFIC NODEAPP ENVIRONMENT
-  // ============================================================
-  //
-  // nodeapp verifies this JWT and gets the user ID from:
-  //
-  //     req.user.id
-  //
-  // Its POST /html route then calls:
-  //
-  //     provisionUserEnvironment(userId)
-  //
-  // which creates/reconciles:
-  //
-  //     downloadapp-${userId}
-  //     viewer-${userId}
-  //     codel-${userId}
-  //     lightdock-${userId}
-  //
-  // ============================================================
-
-  try {
-    const nodeResponse = await fetch(
-      'http://nodeapp:5001/html',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({})
-      }
+    console.log(
+      `Authentication cookie set for user ${user.id}`
     );
 
-    if (!nodeResponse.ok) {
-      const errorText = await nodeResponse.text();
+    // ========================================================
+    // 5. INITIALIZE USER-SPECIFIC NODEAPP ENVIRONMENT
+    // ========================================================
+
+    console.log(
+      '============================================================'
+    );
+
+    console.log(
+      `Provisioning nodeapp environment for user ${user.id}`
+    );
+
+    console.log(
+      'POST http://nodeapp:5001/html'
+    );
+
+    let nodeResponse;
+
+    try {
+
+      nodeResponse = await fetch(
+        'http://nodeapp:5001/html',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+
+          body: JSON.stringify({
+            query: 'login_init'
+          })
+        }
+      );
+
+    } catch (fetchError) {
 
       console.error(
-        `Failed to provision user environment for ${user.id}:`,
-        nodeResponse.status,
-        errorText
+        `Could not contact nodeapp for user ${user.id}:`,
+        fetchError
       );
 
       return res.status(500).json({
+        success: false,
         error:
           'Login succeeded, but user environment could not be initialized'
       });
     }
 
-    const nodeEnvironment =
-      await nodeResponse.json();
+    // ========================================================
+    // 6. READ NODEAPP RESPONSE AS TEXT
+    // ========================================================
+
+    const nodeResponseText =
+      await nodeResponse.text();
+
+    console.log(
+      `nodeapp HTTP status: ${nodeResponse.status}`
+    );
+
+    console.log(
+      `nodeapp response body: ${nodeResponseText}`
+    );
+
+    // ========================================================
+    // 7. CHECK NODEAPP HTTP STATUS
+    // ========================================================
+
+    if (!nodeResponse.ok) {
+
+      console.error(
+        `Failed to provision user environment for ${user.id}`
+      );
+
+      return res.status(500).json({
+        success: false,
+        error:
+          'Login succeeded, but user environment could not be initialized',
+        nodeapp_status: nodeResponse.status,
+        nodeapp_response: nodeResponseText
+      });
+    }
+
+    // ========================================================
+    // 8. PARSE NODEAPP JSON
+    // ========================================================
+
+    let nodeEnvironment;
+
+    try {
+
+      nodeEnvironment =
+        JSON.parse(nodeResponseText);
+
+    } catch (parseError) {
+
+      console.error(
+        '============================================================'
+      );
+
+      console.error(
+        'NODEAPP RETURNED NON-JSON RESPONSE'
+      );
+
+      console.error(
+        'nodeapp response:',
+        nodeResponseText
+      );
+
+      console.error(
+        'JSON parse error:',
+        parseError.message
+      );
+
+      console.error(
+        '============================================================'
+      );
+
+      return res.status(500).json({
+        success: false,
+        error:
+          'Login succeeded, but nodeapp returned an invalid response'
+      });
+    }
 
     console.log(
       `User environment initialized for user ${user.id}:`,
       nodeEnvironment
     );
 
-  } catch (nodeError) {
-
-    console.error(
-      `Could not contact nodeapp for user ${user.id}:`,
-      nodeError
-    );
-
-    return res.status(500).json({
-      error:
-        'Login succeeded, but user environment could not be initialized'
-    });
-  }
-
-  // ============================================================
-  // INITIALIZE SIMULATOR NGINX WORKSPACE
-  // ============================================================
-
-  try {
-    const appsResponse = await fetch(
-      'http://simulator:4001/',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userId: user.id
-        })
-      }
-    );
-
-    if (!appsResponse.ok) {
-      const errorText = await appsResponse.text();
-
-      console.error(
-        `Failed to initialize nginx workspace for ${user.id}:`,
-        appsResponse.status,
-        errorText
-      );
-
-      return res.status(500).json({
-        error:
-          'Login succeeded, but simulator workspace could not be initialized'
-      });
-    }
+    // ========================================================
+    // 9. LOGIN SUCCESS
+    // ========================================================
 
     console.log(
-      `Initialized nginx workspace for user ${user.id}`
+      '============================================================'
     );
 
-  } catch (appsError) {
-
-    console.error(
-      `Could not contact simulator for user ${user.id}:`,
-      appsError
+    console.log(
+      `LOGIN SUCCESSFUL FOR USER ${user.id}`
     );
 
-    return res.status(500).json({
-      error:
-        'Login succeeded, but simulator workspace could not be initialized'
+    console.log(
+      '============================================================'
+    );
+
+    return res.status(200).json({
+      success: true,
+      user_id: user.id
     });
-  }
-
-  return res.json({
-    success: true
-  });
 
   } catch (err) {
+
+    console.error(
+      '============================================================'
+    );
+
+    console.error(
+      'LOGIN SERVER ERROR'
+    );
+
     console.error(err);
 
+    console.error(
+      '============================================================'
+    );
+
     return res.status(500).json({
+      success: false,
       error: 'Server error'
     });
   }
 });
 
+// ============================================================
+// AUTH VERIFY
+// ============================================================
+
 app.get('/auth/verify', (req, res) => {
-    const token = req.cookies.token;
 
-    if (!token) {
-        return res.status(401).json({ message: 'No token' });
-    }
+  const token = req.cookies.token;
 
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+  if (!token) {
 
-        res.setHeader('X-User-ID', String(decoded.id));
+    return res.status(401).json({
+      success: false,
+      message: 'No token'
+    });
+  }
 
-        return res.status(200).json({
-            ok: true,
-            user_id: decoded.id
-        });
-    } catch (err) {
-        return res.status(403).json({ message: 'Invalid token' });
-    }
+  try {
+
+    const decoded = jwt.verify(
+      token,
+      JWT_SECRET
+    );
+
+    res.setHeader(
+      'X-User-ID',
+      String(decoded.id)
+    );
+
+    return res.status(200).json({
+      ok: true,
+      user_id: decoded.id
+    });
+
+  } catch (err) {
+
+    console.error(
+      'Auth verification failed:',
+      err.message
+    );
+
+    return res.status(403).json({
+      success: false,
+      message: 'Invalid token'
+    });
+  }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on 0.0.0.0:${PORT}`);
-});
+// ============================================================
+// SERVER
+// ============================================================
+
+app.listen(
+  PORT,
+  '0.0.0.0',
+  () => {
+    console.log(
+      `Server running on 0.0.0.0:${PORT}`
+    );
+  }
+);

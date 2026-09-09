@@ -1,49 +1,52 @@
 document.addEventListener('DOMContentLoaded', () => {
-
   const form = document.getElementById('searchForm');
   const inputEl = document.querySelector('.container > .input');
+  const statusEl = document.getElementById('status');
 
   if (!form || !inputEl) {
-    console.error('Form or input element not found!');
+    console.error('Search form or input element not found!');
     return;
   }
 
-  form.addEventListener('submit', async function (event) {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const searchQuery = inputEl.value.trim();
 
     if (!searchQuery) {
-      console.warn('Search query is empty!');
+      if (statusEl) {
+        statusEl.innerText = 'Please enter a query.';
+      }
       return;
     }
 
     try {
-      fetch("/server_one/html", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json; charset=UTF-8"
-        },
-        body: JSON.stringify({ query: searchQuery })
-      })
-        .then(async response => {
-          const text = await response.text();
-          try {
-            const data = JSON.parse(text);
-            if (!response.ok) throw data.error || 'Server error';
-            return data;
-          } catch (e) {
-            // If it wasn't JSON, throw the raw text/HTML or a friendly message
-            throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}...`);
-          }
-        })
-        .then(data => {
-          console.log('Search results:', data);
-        })
-        .catch(error => console.error('Error:', error));
+      if (statusEl) {
+        statusEl.innerText = 'Sending query...';
+      }
 
-      const data = await response.json();
+      const response = await fetch('/server_one/html', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: searchQuery
+        })
+      });
+
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          `Server returned non-JSON response (${response.status}): ${text.substring(0, 200)}`
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -53,14 +56,25 @@ document.addEventListener('DOMContentLoaded', () => {
         );
       }
 
-      console.log('Search input sent successfully:', data);
+      console.log('Query successfully sent to server_one:', data);
 
-      // Clear the search box after successful submission.
+      if (statusEl) {
+        statusEl.innerText =
+          `Query sent successfully for user-${data.user_id}`;
+      }
+
       inputEl.value = '';
 
     } catch (error) {
-      console.error('Error sending search input:', error);
+      console.error(
+        'Error sending query to server_one:',
+        error
+      );
+
+      if (statusEl) {
+        statusEl.innerText =
+          `Error sending query: ${error.message}`;
+      }
     }
   });
-
 });

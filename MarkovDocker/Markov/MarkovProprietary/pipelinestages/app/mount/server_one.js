@@ -223,49 +223,6 @@ app.post(
           'Server error'
       });
     }
-
-    // Inside app.post('/login', ...) in server.js
-    try {
-      const nodeResponse = await fetch(
-        'http://nodeapp:5001/html',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          // FIX: Send a valid query payload so nodeapp validation passes during login
-          body: JSON.stringify({ query: 'login_init' })
-        }
-      );
-
-      if (!nodeResponse.ok) {
-        const errorText = await nodeResponse.text();
-        console.error(
-          `Failed to provision user environment for ${user.id}:`,
-          nodeResponse.status,
-          errorText
-        );
-        return res.status(500).json({
-          error: 'Login succeeded, but user environment could not be initialized'
-        });
-      }
-
-      const nodeEnvironment = await nodeResponse.json();
-      console.log(
-        `User environment initialized for user ${user.id}:`,
-        nodeEnvironment
-      );
-
-    } catch (nodeError) {
-      console.error(
-        `Could not contact nodeapp for user ${user.id}:`,
-        nodeError
-      );
-      return res.status(500).json({
-        error: 'Login succeeded, but user environment could not be initialized'
-      });
-    }
   }
 );
 
@@ -520,10 +477,6 @@ async function ensureUserWorkspace(
     }
   );
 
-  /*
-   * Copy the root server_two.js into the user's
-   * isolated workspace.
-   */
   const sourceServerTwo =
     path.join(
       __dirname,
@@ -551,10 +504,6 @@ async function ensureUserWorkspace(
     );
   }
 
-  /*
-   * Initialize the user's workspace only from
-   * the shared template.
-   */
   const workspaceWasNew =
     !fs.existsSync(
       path.join(
@@ -683,19 +632,6 @@ function getUserVolumes() {
 
 // ============================================================
 // LIGHTDOCK VOLUME MOUNT
-//
-// Lightdock MUST see the entire PVC.
-//
-// This gives Lightdock:
-//
-// /mount/user-1/input
-// /mount/user-1/output
-// /mount/user-2/input
-// /mount/user-2/output
-// etc.
-//
-// The Lightdock process itself selects its user
-// directory using the user ID.
 // ============================================================
 
 function getLightdockVolumeMount() {
@@ -822,10 +758,6 @@ async function ensureUserAppDeployment(
 
   let desiredEnv = [];
 
-  /*
-   * Codel is the ONLY application that gets
-   * access to the host Docker socket.
-   */
   if (
     appName === 'codel'
   ) {
@@ -984,11 +916,6 @@ async function ensureUserAppDeployment(
             createErr
           );
 
-        /*
-         * Protect against a race where another
-         * provisioning request creates the deployment
-         * between our READ and CREATE.
-         */
         if (
           Number(statusCode) ===
           409
@@ -1040,8 +967,7 @@ async function ensureUserAppDeployment(
           );
 
       const existingSubPath =
-        existingMount
-          ?.subPath;
+        existingMount?.subPath;
 
       const desiredSubPath =
         `user-${userId}`;
@@ -1454,11 +1380,6 @@ async function ensureUserAppDeployment(
 
 // ============================================================
 // PERSISTENT LIGHTDOCK WORKER
-//
-// IMPORTANT:
-// Lightdock receives ONLY userId.
-//
-// It mounts the ENTIRE markov-app PVC.
 // ============================================================
 
 async function ensureUserLightdockDeployment(
@@ -1473,23 +1394,12 @@ async function ensureUserLightdockDeployment(
   const desiredImage =
     LIGHTDOCK_IMAGE;
 
-  /*
-   * IMPORTANT:
-   * Use the Lightdock virtualenv.
-   */
   const desiredCommand = [
     '/opt/app/lightdock/venv/bin/python',
     'Run_Markov.py',
     userId.toString()
   ];
 
-  /*
-   * IMPORTANT:
-   * Lightdock must mount the ENTIRE PVC.
-   *
-   * DO NOT use getUserVolumeMount(userId)
-   * because that applies subPath=user-${userId}.
-   */
   const desiredVolumeMounts = [
     getLightdockVolumeMount()
   ];
@@ -1825,10 +1735,6 @@ async function ensureUserLightdockDeployment(
           err
         );
 
-      /*
-       * Protect against a race between
-       * read and create.
-       */
       if (
         Number(statusCode) ===
         409
@@ -1923,12 +1829,6 @@ async function provisionUserEnvironment(
     `[USER ${userId}] ENSURING lightdock-${userId}`
   );
 
-  /*
-   * Lightdock is independent of
-   * ensureUserAppDeployment().
-   *
-   * It receives ONLY userId.
-   */
   await ensureUserLightdockDeployment(
     userId
   );
@@ -2244,48 +2144,59 @@ app.post(
     console.log('Received query:', query);
     console.log('============================================================');
 
+    if (
+      typeof query !== 'string' ||
+      !query.trim()
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: 'query is required'
+      });
+    }
+
     try {
-      // 1. Provision or reconcile the user's Kubernetes environment
-      if (typeof provisionUserEnvironment === 'function') {
-        await provisionUserEnvironment(userId);
-      }
+      const workspace =
+        await ensureUserWorkspace(userId);
 
-      // 2. Ensure user workspace directories exist
-      const workspace = await ensureUserWorkspace(userId);
-      const inputDir = workspace.input;
+      const inputDir =
+        workspace.input;
 
-      let writtenFile = null;
+      const namesPath =
+        path.join(
+          inputDir,
+          'names.txt'
+        );
 
-      // 3. If a real search query is provided, store it in names.txt
-      if (typeof query === 'string' && query.trim() && query.trim() !== 'login_init') {
-        const namesPath = path.join(inputDir, 'names.txt');
-        await fs.promises.writeFile(namesPath, query.trim());
-        writtenFile = namesPath;
-        console.log(`[USER ${userId}] Wrote query to ${namesPath}`);
-      } else {
-        console.log(`[USER ${userId}] Environment provisioned successfully (login/init call)`);
-      }
+      await fs.promises.writeFile(
+        namesPath,
+        query.trim()
+      );
+
+      console.log(
+        `[USER ${userId}] Wrote query to ${namesPath}`
+      );
 
       return res.json({
         ok: true,
         user_id: userId,
-        query: query ? query.trim() : null,
-        file: writtenFile
+        query: query.trim(),
+        file: namesPath
       });
 
     } catch (err) {
       console.error(
-        `[USER ${userId}] Failed to process user environment/query:`,
+        `[USER ${userId}] Failed to write query:`,
         err
       );
 
       return res.status(500).json({
         ok: false,
-        error: 'failed to process user environment'
+        error: 'failed to write query'
       });
     }
   }
 );
+
 
 // ============================================================
 // START

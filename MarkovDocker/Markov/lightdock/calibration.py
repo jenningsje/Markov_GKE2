@@ -3,18 +3,20 @@ import logging
 import time
 from renew import *
 import shutil
+from usr import *
 
+id = get_user_id()
 
 # Specify the directory and file name
-input_dir = "/opt/app/MarkovProprietary/pipelinestages/app/mount/input"
+input_dir = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input"
 input_file = 'names.txt'
 input_path = os.path.join(input_dir, input_file)
 
 # path to message for the user
-message_path = "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/message.txt"
+message_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/message.txt"
 
 # from_front_end_path
-from_front_end_path = "/opt/app/MarkovProprietary/pipelinestages/app/mount/output/from_front_end.txt"
+from_front_end_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt"
 
 # acceptable number of cores
 acceptable_number_of_cores = range(1, 5)
@@ -54,7 +56,6 @@ def cleanup_lightdock():
             print(f"Not found: {path}")
 
 cleanup_lightdock()
-
 
 def fetch_input(message):
 

@@ -4,9 +4,12 @@ sys.path.append('..')
 from gemmi import *
 from fetch_from_mount import *
 from fetch_from_alphafold import *
+from usr import *
+
+user_id = get_user_id()
 
 # change directory to app/mount/input
-os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/input")
+os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input")
 
 def message(text):
     f = open("message.txt", "w")
@@ -27,7 +30,7 @@ def fetch_pdb(protein, new_file_path):
     # rename protein to prot1.pdb and move file to lightdock directory
     shutil.move(prot_file_path, new_file_path)
     print(os.getcwd())
-    os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/output")
+    os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output")
     message("fetching from the pdb...")
     print("fetching from the pdb...")
     os.chdir("../input")
@@ -38,10 +41,10 @@ def fetch_AlphaFold(protein, new_file_path):
     # rename protein to prot1.pdb and move file to lightdock directory
     shutil.move(prot_file_path, new_file_path)
     print(os.getcwd())
-    os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/output")
+    os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output")
     message("file not available on the protein databank fetching file from the alphafold databank instead...")
     print("file not available on the protein databank fetching file from the alphafold databank instead...")
-    os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/input")
+    os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input")
 
 def fetch_protein(protein, file_path):
     # attempt to fetch the name of the protein from the protein databank
@@ -56,7 +59,7 @@ def fetch_protein(protein, file_path):
         try:
             fetch_AlphaFold(protein, file_path)
         except:
-            os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/output")
+            os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output")
             message("that protein does not exist in the protein databank or the alphafold databank, please try another query")
             print("that protein does not exist in the protein databank or the alphafold databank, please try another query")
-            os.chdir("/opt/app/MarkovProprietary/pipelinestages/app/mount/input")
+            os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input")

@@ -8,107 +8,14 @@ from fetch_protein import *
 from simulate import *
 from calibration import *
 import shutil
-
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,  # Set the log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Log message format
-    handlers=[
-        logging.FileHandler("app.log"),  # Log to a file
-        logging.StreamHandler()  # Log to the console
-    ]
-)
-
-logger = logging.getLogger(__name__)
+from usr import *
 
 from_alphafold = "file not available on the protein databank fetching file from the alphafold databank instead..."
 from_pdb = "fetching from the pdb..."
 simulation_finished = "docking simulation finished..."
 
-# ============================================================
-# USER ID
-# ============================================================
-
-def get_user_id():
-    """
-    Run_Markov.py MUST receive a user ID.
-
-    The Node/Kubernetes layer passes it as argv[1].
-    MARKOV_USER_ID is also supplied as a secondary safeguard.
-
-    NEVER wait indefinitely for a missing user ID.
-    """
-
-    argv_user_id = None
-
-    if len(sys.argv) > 1:
-        argv_user_id = str(sys.argv[1]).strip()
-
-    env_user_id = os.environ.get(
-        "MARKOV_USER_ID",
-        ""
-    ).strip()
-
-    if not argv_user_id:
-        logging.critical(
-            "FATAL: Run_Markov.py was started without argv[1] user ID"
-        )
-
-        if env_user_id:
-            logging.critical(
-                f"MARKOV_USER_ID exists ({env_user_id}) but argv[1] is missing"
-            )
-
-        raise RuntimeError(
-            "Run_Markov.py requires a user ID as argv[1]"
-        )
-
-    if not env_user_id:
-        logging.warning(
-            "MARKOV_USER_ID environment variable is missing"
-        )
-
-    if env_user_id and env_user_id != argv_user_id:
-        logging.critical(
-            f"FATAL: user ID mismatch: argv={argv_user_id}, "
-            f"MARKOV_USER_ID={env_user_id}"
-        )
-
-        raise RuntimeError(
-            "User ID mismatch between argv[1] and MARKOV_USER_ID"
-        )
-
-    return argv_user_id
-
-
-user_id = get_user_id()
-
-logging.info(
-    f"============================================================"
-)
-
-logging.info(
-    f"Run_Markov.py STARTED FOR USER ID: {user_id}"
-)
-
-logging.info(
-    f"sys.argv: {sys.argv}"
-)
-
-logging.info(
-    f"MARKOV_USER_ID: {os.environ.get('MARKOV_USER_ID')}"
-)
-
-logging.info(
-    f"============================================================"
-)
-
-logging.info(f"Worker assigned to user {user_id}")
-
 def Markov():
     while True:
-
-        logging.info(f"user_id: {user_id}")
 
         try:
 
@@ -128,28 +35,28 @@ def Markov():
             cleanup_lightdock()
 
             try:
-                with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt", 'w'):
+                with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt", 'w'):
                     pass
 
             except Exception as e:
-                os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input")
-                with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt", 'w'):
+                os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input")
+                with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/output/user-{id}/from_front_end.txt", 'w'):
                     pass
 
             # fetch the current signal from the front end
-            from_front_end_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt")
+            from_front_end_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt")
 
             if from_front_end_size == 0:
-                with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/message.txt", "w") as message:
+                with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/message.txt", "w") as message:
                     message.write("fetch the next two proteins...")
                     logger.info("fetch the next two proteins...")
                     time.sleep(1) 
 
             # retrieve the size of file
-            open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt", "w")
+            open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input/names.txt", "w")
         
             # while the size of the file is zero wait for user input
-            input_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt"
+            input_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input/names.txt"
 
             while True:
                 file_size = os.path.getsize(input_path)
@@ -167,7 +74,7 @@ def Markov():
             logger.info(f"names_lines: {names_lines}")
 
             # fetch user input
-            names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+            names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input/names.txt")
             names_lines = names.readlines()
             logger.info(names_lines[0])
 
@@ -177,15 +84,15 @@ def Markov():
 
             # erase the data from names.txt
             logger.info("test")
-            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt", "w"):
+            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input/names.txt", "w"):
                 pass
 
-            while os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt") == 0:
-                logger.info(os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt"))
+            while os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt") == 0:
+                logger.info(os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt"))
                 time.sleep(1)
 
             # fetch the current signal from the front end
-            from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt")
+            from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt")
             from_front_end_lines = from_front_end.readlines()
             first_front_end_line = from_front_end_lines[0].split('\n')[0].strip()
 
@@ -194,7 +101,7 @@ def Markov():
                 logger.info(f"first_front_end_line is: {first_front_end_line}")
                 logger.info(f"from_pdb is: {from_pdb}")
                 logger.info(f"waiting for signal from front end...")
-                from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt")
+                from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt")
                 from_front_end_lines = from_front_end.readlines()
                 first_front_end_line = from_front_end_lines[0].split('\n')[0].strip()
                 val = first_front_end_line == from_pdb
@@ -202,51 +109,51 @@ def Markov():
                 time.sleep(1)
 
                 # delete names.txt file if present
-                if os.path.isfile(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt"):
-                    os.remove(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                if os.path.isfile("names.txt"):
+                    os.remove("names.txt")
 
                 # if a bad query was made then allow the user to try another query, this will repeat until a protein is obtained
                 if first_front_end_line == "that protein does not exist in the protein databank or the alphafold databank, please try another query":
                     logger.info("inside if statement")
 
                     # fetch user input and create an empty names.txt file
-                    with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt", "r+") as names:
+                    with open("names.txt", "r+") as names:
                         # read the lines of names.txt
                         names_lines = names.readlines()
 
                     # get the size of the names.txt file
-                    file_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                    file_size = os.path.getsize("names.txt")
                 
                     # while the size of the file is zero wait for user input
                     while (file_size == 0):
                         # fetch user input
-                        names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                        names = open("names.txt")
                         names_lines = names.readlines()
-                        file_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                        file_size = os.path.getsize("names.txt")
                         logger.info("no user input")
                         time.sleep(1)
 
                     # fetch user input
-                    names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                    names = open("names.txt")
                     names_lines = names.readlines()
                     logger.info(names_lines[0])
                     fetch_protein(names_lines[0], "/opt/app/lightdock/prot1.pdb")
                 time.sleep(1) 
 
-            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt"):
+            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt"):
                 pass
 
             # fetch user input and create an empty names.txt file
-            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt", "a+") as names:
+            with open("names.txt", "a+") as names:
                 # read the lines of names.txt
                 names_lines = names.readlines()
                 time.sleep(1) 
             
             # check the size of the file again
-            new_file_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+            new_file_size = os.path.getsize("names.txt")
 
             # erase the data from the message
-            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/message.txt", "w") as message:
+            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/message.txt", "w") as message:
                 message.write("fetch the next protein...")
                 logger.info("fetch the next protein...")
                 time.sleep(1) 
@@ -254,14 +161,14 @@ def Markov():
             # while the size of the file is zero wait for user input
             while (new_file_size == 0):
                 # fetch user input
-                names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input/names.txt")
                 names_lines = names.readlines()
-                new_file_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                new_file_size = os.path.getsize("names.txt")
                 logger.info("no user input")
                 time.sleep(1)
 
             # fetch user input
-            names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+            names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input/names.txt")
             names_lines = names.readlines()
             logger.info(names_lines[0])
             logger.info("end of for loop")
@@ -270,11 +177,11 @@ def Markov():
 
             # erase the data from names.txt
             logger.info("test")
-            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt", "w"):
+            with open("names.txt", "w"):
                 pass
 
             # fetch the current signal from the front end
-            from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt")
+            from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt")
             from_front_end_lines = from_front_end.readlines()
             first_front_end_line = from_front_end_lines[0].split('\n')[0].strip()
 
@@ -283,40 +190,40 @@ def Markov():
                 time.sleep(1) 
 
                 # delete names.txt file if present
-                if os.path.isfile(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt"):
-                    os.remove(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                if os.path.isfile("names.txt"):
+                    os.remove("names.txt")
 
                 # if a bad query was made then allow the user to try another query, this will repeat until a protein is obtained
                 if first_front_end_line == "that protein does not exist in the protein databank or the alphafold databank, please try another query":
                     logger.info("inside if statement")
 
                     # fetch user input and create an empty names.txt file
-                    with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt", "a+") as names:
+                    with open("names.txt", "a+") as names:
                         # read the lines of names.txt
                         names_lines = names.readlines()
                         time.sleep(1)
 
                     # get the size of the names.txt file
-                    file_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
-
+                    file_size = os.path.getsize("names.txt")
+                
                     # while the size of the file is zero wait for user input
                     while (file_size == 0):
                         # fetch user input
-                        names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                        names = open("names.txt")
                         names_lines = names.readlines()
-                        file_size = os.path.getsize(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                        file_size = os.path.getsize("names.txt")
                         logger.info("no user input")
                         time.sleep(1)
 
                     # fetch user input
-                    names = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/names.txt")
+                    names = open("names.txt")
                     names_lines = names.readlines()
                     logger.info(names_lines[0])
                     fetch_protein(names_lines[0], "/opt/app/lightdock/prot2.pdb")
 
                 time.sleep(1) 
 
-            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/message.txt", "w") as message:
+            with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/message.txt", "w") as message:
                 message.write("docking simulator ready...")
                 logger.info("docking simulator ready...")
                 time.sleep(1) 
@@ -324,7 +231,7 @@ def Markov():
             os.chdir("/opt/app/lightdock")
             time.sleep(1)
             
-            while not os.path.isfile(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input/ping.json"):
+            while not os.path.isfile(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input/ping.json"):
                 time.sleep(1)
 
             simulator()
@@ -341,7 +248,7 @@ def Markov():
             logger.error(f"Error occurred: {e}", exc_info=True)
             time.sleep(1)
 
-        os.chdir(f'/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input')
+        os.chdir(f'/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input')
 
 if __name__ == "__main__":
     Markov()

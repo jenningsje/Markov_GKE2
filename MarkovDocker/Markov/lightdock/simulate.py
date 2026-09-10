@@ -4,44 +4,17 @@ import logging
 import time
 from renew import *
 from calibration import *
-import math
-import sys
+from usr import *
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,  # Set the log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Log message format
-    handlers=[
-        logging.FileHandler("app.log"),  # Log to a file
-        logging.StreamHandler()  # Log to the console
-    ]
-)
+message_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/message.txt"
 
-logger = logging.getLogger(__name__)
-
-logging.basicConfig(level=logging.INFO)
-
-user_id = None
-
-while user_id is None:
-    if len(sys.argv) > 1:
-        user_id = sys.argv[1]
-        break
-
-    logging.info("Waiting for user ID...")
-    time.sleep(1)
-
-logging.info(f"Worker assigned to user {user_id}")
-
-message_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/message.txt"
-
-from_front_end_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt"
+from_front_end_path = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt"
 
 simulation_finished = "docking simulation finished..."
 
-lightdock_to_front_end = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt"
+lightdock_to_front_end = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt"
 
-lightdock_to_message = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/message.txt"
+lightdock_to_message = f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/message.txt"
 
 def messager(message):
 	try:
@@ -87,7 +60,7 @@ def simulator():
     
 	logging.info(f"the current working directory in simulate is {os.getcwd()}")
 
-	run_command(["rm", "-rf", f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/lightdock_0.pdb"])
+	run_command(["rm", "-rf", f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/lightdock_0.pdb"])
 
 	os.chdir("/opt/app/lightdock")
 
@@ -110,24 +83,24 @@ def simulator():
 	if not os.path.exists("generated_conformations"):
 		os.mkdir("generated_conformations")
 
-	run_command(["mv", "lightdock_0.pdb", f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/lightdock_0.pdb"])
+	run_command(["mv", "lightdock_0.pdb", f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/lightdock_0.pdb"])
 
 	simulation_finished = "simulation finished..."
 
 	val1 = True
 
 	# open from_font_end.txt and read the lines
-	from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt")
+	from_front_end = open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt")
 	from_front_end_lines = from_front_end.readlines()
 
-	with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/message.txt", "w") as message:
+	with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/message.txt", "w") as message:
 		message.write(simulation_finished)
 		print(simulation_finished)
 		time.sleep(5)
 
 	while val1:
 		try:
-			with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt") as from_front_end:
+			with open(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt") as from_front_end:
 				from_front_end_lines = from_front_end.readlines()
 			
 			while from_front_end_lines and from_front_end_lines[0].strip() != simulation_finished:
@@ -135,7 +108,7 @@ def simulator():
 				logging.info("Waiting for signal from front end...")
 				
 				time.sleep(5)
-				with open(f"../../MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt") as from_front_end:
+				with open(f"../../MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt") as from_front_end:
 					from_front_end_lines = from_front_end.readlines()
 				
 				val1 = from_front_end_lines and from_front_end_lines[0].strip() != simulation_finished
@@ -145,13 +118,13 @@ def simulator():
 		except Exception as e:
 			logging.error(f"Error while checking front-end signal: {e}", exc_info=True)
 			print("Content empty, waiting for content")
-			run_command(["cat", f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/output/from_front_end.txt"])
+			run_command(["cat", f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/output/from_front_end.txt"])
 			time.sleep(5)
 		
 		val1 = False
 
 	os.chdir("..")
 	print(os.getcwd())
-	os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{user_id}/input")
+	os.chdir(f"/opt/app/MarkovProprietary/pipelinestages/app/mount/user-{id}/input")
 
-	logging.info(f"current working directory: {os.getcwd()} changing to /app/mount/input")
+	logging.info(f"current working directory: {os.getcwd()} changing to /app/mount/user-{id}/input")

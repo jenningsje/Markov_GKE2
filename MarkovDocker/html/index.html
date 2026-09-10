@@ -1,688 +1,1002 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/svg+xml" href="logo.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Markov-Eklypse Simulator</title>
-    <style>
-        :root {
-            --size: 1;
-        }
-        * {
-            box-sizing: border-box;
-        }
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            min-height: 100%;
-            font-family: Arial, Helvetica, sans-serif;
-            background: #ffffff;
-            color: #111111;
-        }
-        body {
-            overflow-x: hidden;
-        }
-        .container {
-            width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            margin: 0 0 20px 0;
-        }
-        h2 {
-            margin-top: 30px;
-        }
-        textarea,
-        input {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #aaa;
-            border-radius: 4px;
-        }
-        textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-        button {
-            padding: 10px 18px;
-            margin-top: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            border: 1px solid #888;
-            border-radius: 4px;
-            background: #eee;
-        }
-        button:hover {
-            background: #ddd;
-        }
-        .section {
-            margin-bottom: 30px;
-        }
-        .status {
-            margin-top: 10px;
-            padding: 10px;
-            min-height: 20px;
-        }
-        #fileContent {
-            white-space: pre-wrap;
-            word-break: break-word;
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-top: 15px;
-            min-height: 100px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background: #f2f2f2;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markov-Eklypse Simulator</title>
+  <style>
+    body {
+      background-color: rgb(33, 33, 33);
+      font-family: Calibri, sans-serif;
+    }
+    .input_wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 50%;
+      max-width: 400px;
+      margin: 30px auto 20px;
+    }
+    .container {
+      position: relative;
+      --size: 44px;
+      width: var(--size);
+      height: var(--size);
+      color: white;
+    }
+    .input {
+      width: 100%;
+      height: 100%;
+      padding-left: 0;
+      padding-right: 0;
+      margin: 0;
+      font-size: 15px;
+      border: none;
+      outline: none;
+      background-color: #191A1E;
+      color: transparent;
+      caret-color: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.35s ease;
+      box-shadow:
+        1.5px 1.5px 3px #0e0e0e,
+        -1.5px -1.5px 3px rgba(95, 94, 94, 0.25),
+        inset 0 0 0 #0e0e0e,
+        inset 0 0 0 #5f5e5e;
+    }
+    .input:focus,
+    .input:not(:placeholder-shown) {
+      width: 240px;
+      padding-left: var(--size);
+      padding-right: 16px;
+      color: white;
+      caret-color: white;
+      cursor: text;
+      border-radius: 999px;
+      box-shadow:
+        0 0 0 #0e0e0e,
+        0 0 0 rgba(95, 94, 94, 0.25),
+        inset 1.5px 1.5px 3px #0e0e0e,
+        inset -1.5px -1.5px 3px #5f5e5e;
+    }
+    .input::placeholder {
+      opacity: 0;
+      color: transparent;
+    }
+    .input:focus::placeholder {
+      opacity: 0.65;
+      color: rgba(255, 255, 255, 0.65);
+    }
+    .container .icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .container .icon svg {
+      width: 58%;
+      height: 58%;
+    }
+    .animated-button {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 40px;
+      font-size: 16px;
+      font-weight: 600;
+      color: greenyellow;
+      background: transparent;
+      border: 2px solid greenyellow;
+      border-radius: 999px;
+      box-shadow: 0 0 0 3px greenyellow;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      margin-top: 20px;
+    }
+    .animated-button svg {
+      position: absolute;
+      width: 22px;
+      fill: greenyellow;
+      z-index: 2;
+      transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .animated-button .arr-1 {
+      right: 16px;
+    }
+    .animated-button .arr-2 {
+      left: -40%;
+    }
+    .animated-button .text {
+      position: relative;
+      z-index: 1;
+      transform: translateX(-8px);
+      transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .animated-button .circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0;
+      height: 0;
+      background: greenyellow;
+      border-radius: 50%;
+      opacity: 0;
+      transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .animated-button:hover {
+      color: #121212;
+      border-color: transparent;
+      box-shadow: 0 0 0 14px transparent;
+      border-radius: 16px;
+    }
+    .animated-button:hover .arr-1 {
+      right: -40%;
+    }
+    .animated-button:hover .arr-2 {
+      left: 16px;
+    }
+    .animated-button:hover .text {
+      transform: translateX(8px);
+    }
+    .animated-button:hover svg {
+      fill: #121212;
+    }
+    .animated-button:hover .circle {
+      width: 260px;
+      height: 260px;
+      opacity: 1;
+    }
+    .animated-button:active {
+      scale: 0.96;
+      box-shadow: 0 0 0 6px greenyellow;
+    }
+    .search-button {
+      margin-left: 8px;
+      margin-right: 20px;
+      background-color: transparent;
+      outline: none;
+      border: none;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 15%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 35px;
+      height: 35px;
+      transition: background-color 0.3s ease;
+    }
+    .search-button:hover {
+      background-color: greenyellow;
+    }
+    .search-button svg {
+      width: 100%;
+      height: 100%;
+    }
+    .search-button svg line {
+      stroke: greenyellow;
+      stroke-width: 3;
+      stroke-linecap: round;
+      transition: stroke 0.3s ease;
+    }
+    .search-button:hover svg line {
+      stroke: black;
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-    <h1>Markov-Eklypse Simulator</h1>
-    <!-- MESSAGE -->
-    <div class="section">
-        <h2>Message</h2>
-        <div id="fileContent"></div>
-        <div id="status" class="status"></div>
-    </div>
-    <!-- PROTEIN SEARCH -->
-    <div class="section">
-        <h2>Protein Search</h2>
-        <input
-            id="searchInput"
-            type="text"
-            placeholder="Enter protein names"
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    RUNNING MARKOV
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    Instructions
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (1) Use codel to ask for two proteins with the corresponding properties of your choices that you plan to run in the docking simulation.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (2) By using codel for software engineering and Machine Learning development you consent to the Affredo License for all outputs of the model.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (3) The Simulator uses glowworm swarm optimization and quantum statistical field theoretic corrections with 96.63% accuracy to achieve optimal results.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (4) Submit two proteins that wish to simulate the docking simulation with in the platform.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (5) If you entered a bad entry try again.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (6) Select the number of cores from 1 to four that you wish to use for the simulation, in the majority of cases you will need 1 core, 1000 glowworms and 10 steps.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (7) Select the number of glowworms you wish to use for the simulation.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (8) Select the number of steps you wish to use for the simulation.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (9) Each docking simulation will take a few hours to complete and you can submit hundreds per thousands of simulations per day if you wish to do so.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (10) Afterwards it is advised that the pdb file be used in experimental equipment to verify the treatment in the laboratory.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (11) Uses in the development in pathogens or weapons of mass destruction are stricly forbidden and will result in a permanent ban.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    (12) By using our software you consent that you will abide by these rules and that they will be enforced on the individuals that use this platform.
+  </div>
+  <div style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;">
+    Best! Integral Sequencing Team
+  </div>
+
+  <form id="searchForm" style="margin-top: 20px; display: inline-block;">
+    <div class="container">
+      <input
+        type="text"
+        name="text"
+        class="input"
+        required
+        placeholder="Type to search..."
+      >
+      <div class="icon">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="ionicon"
+          viewBox="0 0 512 512"
         >
-        <button id="searchButton">
-            Search
-        </button>
-        <div id="searchStatus" class="status"></div>
+          <title>Search</title>
+          <path
+            d="M221.09 64a157.09 157.09 0 10157.09 157.09A157.1 157.1 0 00221.09 64z"
+            fill="none"
+            stroke="currentColor"
+            stroke-miterlimit="10"
+            stroke-width="32"
+          ></path>
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-miterlimit="10"
+            stroke-width="32"
+            d="M338.29 338.29L448 448"
+          ></path>
+        </svg>
+      </div>
     </div>
-    <!-- RESULTS -->
-    <div class="section">
-        <h2>Results</h2>
-        <div id="resultsTable"></div>
-    </div>
-    <!-- SIMULATION -->
-    <div class="section">
-        <h2>Simulation</h2>
-        <button id="simulateButton">
-            Run Simulation
-        </button>
-        <div id="simulateStatus" class="status"></div>
-    </div>
-</div>
-<script>
-/*
- * ============================================================
- * ROUTES
- * ============================================================
- */
-const SERVER_ONE_HTML = '/server_one/html';
-const SERVER_ONE_SIMULATE = '/server_one/html/simulate';
-const FLASK_HTML = '/receive_signal/html';
-let CURRENT_USER_ID = null;
-/*
- * ============================================================
- * AUTHENTICATION
- * ============================================================
- *
- * We do NOT send the user ID manually from JavaScript.
- *
- * credentials: 'include' sends the authentication cookie.
- * Flask reads the JWT from that cookie and gets:
- *
- *     request.user["id"]
- *
- * ============================================================
- */
-async function initializeUser() {
-    try {
-        const response = await fetch('/auth_check', {
+
+    <button
+      class="search-button"
+      style="margin-top: 8px;"
+    >
+      <svg
+        viewBox="0 0 50 50"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <line x1="5" y1="25" x2="40" y2="25"/>
+        <line x1="30" y1="15" x2="40" y2="25"/>
+        <line x1="30" y1="35" x2="40" y2="25"/>
+      </svg>
+    </button>
+  </form>
+
+  <form id="runLightdock">
+    <button class="animated-button">
+      <svg
+        viewBox="0 0 24 24"
+        class="arr-2"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
+        ></path>
+      </svg>
+
+      <span class="text">
+        Run Simulation
+      </span>
+
+      <span class="circle"></span>
+
+      <svg
+        viewBox="0 0 24 24"
+        class="arr-1"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
+        ></path>
+      </svg>
+    </button>
+  </form>
+
+  <div
+    id="fileContent"
+    style="font-size: 12.6px; margin-top: 19px; color: rgb(185, 185, 185); max-width: 85%;"
+  ></div>
+
+  <div
+    id="status"
+    style="color: lightgreen; margin-top: 10px;"
+  ></div>
+
+  <script>
+
+    // ============================================================
+    // USER-SPECIFIC ROUTING
+    // ============================================================
+
+    let CURRENT_USER_ID = null;
+
+    const USER_SERVER_ONE_HTML = '/server_one/html';
+    const USER_SERVER_ONE_SIMULATE = '/server_one/html/simulate';
+
+    /*
+     * Flask endpoint for the MESSAGE.
+     *
+     * The JWT cookie is sent with this request.
+     */
+    const FLASK_HTML = '/receive_signal/html';
+
+
+    // ============================================================
+    // GET CURRENT AUTHENTICATED USER
+    // ============================================================
+
+    async function initializeUser() {
+      try {
+        const response = await fetch(
+          '/auth/verify',
+          {
             method: 'GET',
             credentials: 'include'
-        });
-        if (!response.ok) {
-            console.error('Authentication check failed');
-            return false;
-        }
-        const result = await response.json();
-        if (result.user_id !== undefined && result.user_id !== null) {
-            CURRENT_USER_ID = String(result.user_id);
-            console.log(
-                'Authenticated user:',
-                CURRENT_USER_ID
-            );
-        }
-        return true;
-    } catch (error) {
-        console.error(
-            'Error checking authentication:',
-            error
+          }
         );
+
+        if (!response.ok) {
+          throw new Error(
+            `Authentication failed: ${response.status}`
+          );
+        }
+
+        const result = await response.json();
+
+        if (
+          result.user_id !== undefined &&
+          result.user_id !== null
+        ) {
+          CURRENT_USER_ID = result.user_id;
+        }
+
+        console.log(
+          'Authenticated user:',
+          CURRENT_USER_ID
+        );
+
+        console.log(
+          'Server one endpoint:',
+          USER_SERVER_ONE_HTML
+        );
+
+        return true;
+
+      } catch (error) {
+
+        console.error(
+          'Unable to initialize authenticated user:',
+          error
+        );
+
+        document.getElementById(
+          'status'
+        ).innerText =
+          'Authentication failed. Please log in again.';
+
         return false;
+      }
     }
-}
-/*
- * ============================================================
- * SEND MESSAGE TO FLASK
- * ============================================================
- *
- * IMPORTANT:
- *
- * The MESSAGE goes to Flask.
- *
- * Protein names do NOT go to Flask.
- *
- * The JWT cookie is automatically included because of:
- *
- *     credentials: 'include'
- *
- * Flask obtains the user ID from the JWT.
- *
- * Flask then writes:
- *
- *     /mount/user-<id>/output/from_front_end.txt
- *
- * ============================================================
- */
-async function sendFileContentToBackend(message) {
+
+
+    // ============================================================
+    // SEND MESSAGE TO FLASK
+    // ============================================================
+    //
+    // IMPORTANT:
+    //
+    // The MESSAGE is sent to Flask.
+    //
+    // Protein names are NOT sent to Flask.
+    //
+    // credentials: 'include' sends the JWT cookie.
+    //
+    // Flask reads:
+    //
+    //     request.user["id"]
+    //
+    // and writes:
+    //
+    //     user-${id}/output/from_front_end.txt
+    //
+    // ============================================================
+    async function sendMessageToFlask(message) {
     try {
         if (
-            message === null ||
-            message === undefined ||
-            message.trim() === ''
+        message === null ||
+        message === undefined ||
+        String(message).trim() === ''
         ) {
-            console.warn(
-                'No message to send to Flask'
-            );
-            return false;
+        console.log('No message to send to Flask.');
+        return false;
         }
-        console.log(
-            'Sending MESSAGE to Flask for authenticated user'
-        );
+
         const response = await fetch(
-            FLASK_HTML,
-            {
-                method: 'POST',
-                /*
-                 * THIS IS CRITICAL.
-                 *
-                 * It sends the JWT authentication cookie.
-                 */
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                /*
-                 * Only the MESSAGE is sent here.
-                 *
-                 * No protein names.
-                 * No manually supplied user ID.
-                 */
-                body: JSON.stringify({
-                    content: message
-                })
-            }
+        '/receive_signal/html',
+        {
+            method: 'POST',
+
+            /*
+            * THIS IS REQUIRED.
+            *
+            * The browser attaches the authenticated
+            * token cookie to this request.
+            *
+            * This is the browser equivalent of:
+            *
+            * Cookie: token=YOUR_JWT_TOKEN
+            */
+            credentials: 'include',
+
+            headers: {
+            'Content-Type': 'application/json'
+            },
+
+            /*
+            * ONLY THE MESSAGE goes to Flask.
+            */
+            body: JSON.stringify({
+            content: String(message)
+            })
+        }
         );
-        let result = {};
-        try {
-            result = await response.json();
-        } catch (jsonError) {
-            console.error(
-                'Flask did not return JSON:',
-                jsonError
-            );
-        }
-        if (!response.ok) {
-            console.error(
-                'Flask rejected the message:',
-                result
-            );
-            document.getElementById(
-                'status'
-            ).innerText =
-                'Error sending message to Flask.';
-            return false;
-        }
+
+        const text = await response.text();
+
         console.log(
-            'Message successfully sent to Flask.'
+        'FLASK RESPONSE STATUS:',
+        response.status
         );
-        if (result.user_id !== undefined) {
-            console.log(
-                'Flask processed user ID:',
-                result.user_id
-            );
+
+        console.log(
+        'FLASK RESPONSE:',
+        text
+        );
+
+        let result = {};
+
+        try {
+        result = JSON.parse(text);
+        } catch (error) {
+        console.error(
+            'Flask response was not JSON:',
+            text
+        );
         }
+
+        if (!response.ok) {
+        console.error(
+            'Flask rejected request:',
+            response.status,
+            result
+        );
+
         document.getElementById(
             'status'
         ).innerText =
             result.message ||
-            'Message sent successfully.';
-        return true;
-    } catch (error) {
-        console.error(
-            'Error sending message to Flask:',
-            error
+            result.error ||
+            `Flask request failed: ${response.status}`;
+
+        return false;
+        }
+
+        console.log(
+        'MESSAGE SENT TO FLASK SUCCESSFULLY'
         );
+
+        console.log(
+        'Flask user ID:',
+        result.user_id
+        );
+
+        console.log(
+        'Flask file:',
+        result.file
+        );
+
         document.getElementById(
-            'status'
+        'status'
         ).innerText =
-            'Error sending message to Flask.';
+        result.message ||
+        'Message sent successfully to Flask.';
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+        'ERROR SENDING MESSAGE TO FLASK:',
+        error
+        );
+
+        document.getElementById(
+        'status'
+        ).innerText =
+        `Error sending message to Flask: ${error.message}`;
+
         return false;
     }
-}
-/*
- * ============================================================
- * DISPLAY RESULTS TABLE
- * ============================================================
- */
-function displayTable(data) {
-    const resultsTable =
-        document.getElementById('resultsTable');
-    if (!resultsTable) {
-        return;
     }
-    resultsTable.innerHTML = '';
-    if (!Array.isArray(data) || data.length === 0) {
-        resultsTable.innerText =
-            'No results available.';
-        return;
-    }
-    const table =
-        document.createElement('table');
-    const headerRow =
-        document.createElement('tr');
-    const keys =
-        Object.keys(data[0]);
-    keys.forEach(function(key) {
-        const th =
-            document.createElement('th');
-        th.innerText = key;
-        headerRow.appendChild(th);
-    });
-    table.appendChild(headerRow);
-    data.forEach(function(row) {
-        const tr =
-            document.createElement('tr');
-        keys.forEach(function(key) {
-            const td =
-                document.createElement('td');
-            const value =
-                row[key];
-            if (
-                value !== null &&
-                typeof value === 'object'
-            ) {
-                td.innerText =
-                    JSON.stringify(value);
-            } else {
-                td.innerText =
-                    value ?? '';
-            }
-            tr.appendChild(td);
-        });
-        table.appendChild(tr);
-    });
-    resultsTable.appendChild(table);
-}
-/*
- * ============================================================
- * GET CONTENT FROM NODE
- * ============================================================
- *
- * Node returns the message and protein/result information.
- *
- * We deliberately separate the MESSAGE from the table so that
- * the table can NEVER accidentally get written into
- * from_front_end.txt.
- * ============================================================
- */
-async function fetchFileContent() {
-    try {
-        const response =
-            await fetch(
-                SERVER_ONE_HTML,
-                {
-                    method: 'GET',
-                    credentials: 'include'
-                }
-            );
+    // ============================================================
+    // FETCH USER MESSAGE
+    // ============================================================
+
+    async function fetchFileContent() {
+
+      try {
+
+        const response = await fetch(
+          USER_SERVER_ONE_HTML,
+          {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store'
+          }
+        );
+
         if (!response.ok) {
+
+          if (response.status === 401) {
+
             console.error(
-                'Node returned HTTP status:',
-                response.status
+              'Authentication required while fetching user output.'
             );
+
             return;
-        }
-        const text =
-            await response.text();
-        /*
-         * The FIRST LINE is the message.
-         *
-         * This is what gets sent to Flask.
-         */
-        const lines =
-            text.split(/\r?\n/);
-        const message =
-            lines.length > 0
-                ? lines[0].trim()
-                : '';
-        /*
-         * Display the MESSAGE separately.
-         */
-        document.getElementById(
-            'fileContent'
-        ).innerText = message;
-        /*
-         * Send ONLY the MESSAGE to Flask.
-         */
-        if (message !== '') {
-            await sendFileContentToBackend(
-                message
-            );
-        }
-        /*
-         * ====================================================
-         * PARSE RESULT DATA
-         * ====================================================
-         *
-         * Everything after the message is treated as result
-         * information and displayed separately.
-         */
-        const dataLines =
-            lines.slice(1)
-                .filter(function(line) {
-                    return line.trim() !== '';
-                });
-        if (dataLines.length === 0) {
-            displayTable([]);
-            return;
-        }
-        let parsedData = [];
-        try {
-            /*
-             * Try parsing the remaining content as JSON.
-             */
-            const remainingText =
-                dataLines.join('\n');
-            const parsed =
-                JSON.parse(remainingText);
-            if (Array.isArray(parsed)) {
-                parsedData = parsed;
-            } else if (
-                parsed &&
-                typeof parsed === 'object'
-            ) {
-                parsedData = [parsed];
-            }
-        } catch (jsonError) {
-            /*
-             * If the remaining content isn't JSON,
-             * leave the table empty rather than mixing it
-             * with the MESSAGE.
-             */
+          }
+
+          if (response.status === 404) {
+
             console.log(
-                'Node result content is not JSON.'
+              'User output message.txt does not exist yet.'
             );
-        }
-        displayTable(parsedData);
-    } catch (error) {
-        console.error(
-            'Error fetching content from Node:',
-            error
-        );
-    }
-}
-/*
- * ============================================================
- * PROTEIN SEARCH
- * ============================================================
- *
- * Protein names go ONLY to Node.
- *
- * They are NOT sent to Flask.
- * ============================================================
- */
-async function searchProteins() {
-    const searchInput =
-        document.getElementById(
-            'searchInput'
-        );
-    const searchStatus =
-        document.getElementById(
-            'searchStatus'
-        );
-    const searchQuery =
-        searchInput.value.trim();
-    if (searchQuery === '') {
-        searchStatus.innerText =
-            'Enter protein names first.';
-        return;
-    }
-    searchStatus.innerText =
-        'Sending protein names to Node...';
-    try {
-        const response =
-            await fetch(
-                SERVER_ONE_HTML,
-                {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type':
-                            'application/json; charset=UTF-8'
-                    },
-                    /*
-                     * PROTEIN NAMES GO TO NODE.
-                     *
-                     * This does NOT go to Flask.
-                     */
-                    body: JSON.stringify({
-                        query: searchQuery
-                    })
-                }
-            );
-        const result =
-            await response.json();
-        if (!response.ok) {
-            console.error(
-                'Node rejected protein search:',
-                result
-            );
-            searchStatus.innerText =
-                result.error ||
-                'Protein search failed.';
+
             return;
+          }
+
+          console.error(
+            'Error fetching user output:',
+            response.status
+          );
+
+          return;
         }
-        searchStatus.innerText =
-            result.message ||
-            'Protein names sent successfully.';
+
+        const text =
+          await response.text();
+
+
+        // --------------------------------------------------------
+        // GET THE MESSAGE
+        // --------------------------------------------------------
+
         /*
-         * Refresh Node content.
-         *
-         * If Node has generated a MESSAGE,
-         * fetchFileContent() will send that MESSAGE
-         * to Flask.
+         * Keep the existing frontend display behavior.
          */
-        await fetchFileContent();
-    } catch (error) {
+        const splitContent =
+          text.split('...')[0] + '...';
+
+        const message =
+          text.split(/\r?\n/)[0].trim();
+
+        document.getElementById(
+          'fileContent'
+        ).innerText = splitContent;
+
+
+        // --------------------------------------------------------
+        // SEND MESSAGE TO FLASK
+        // --------------------------------------------------------
+        //
+        // This is the new functional change.
+        //
+        // The exact first-line MESSAGE returned by Node
+        // is sent to Flask.
+        //
+        // The JWT cookie is included automatically.
+        //
+        // --------------------------------------------------------
+
+        if (message !== '') {
+
+          await sendMessageToFlask(
+            message
+          );
+        }
+
+
+        // --------------------------------------------------------
+        // PROCESS TABLE DATA
+        // --------------------------------------------------------
+
+        const lines =
+          text.split(/\r?\n/);
+
+        if (lines.length < 2) {
+
+          console.log(
+            'No second line or content to process.'
+          );
+
+          return;
+        }
+
+        if (/^\s*\*\s*$/.test(lines[1])) {
+
+          const tableData =
+            lines.slice(2).join('\n');
+
+          console.log(tableData);
+
+          displayTable(tableData);
+
+        } else {
+
+          console.log(
+            'No table separator after the first line.'
+          );
+        }
+
+      } catch (error) {
+
         console.error(
-            'Protein search error:',
-            error
+          'Error fetching user output:',
+          error
         );
-        searchStatus.innerText =
-            'Error sending protein names to Node.';
+      }
     }
-}
-/*
- * ============================================================
- * SIMULATION
- * ============================================================
- *
- * Simulation request goes to Node first.
- *
- * The user identity is carried by the JWT cookie.
- * ============================================================
- */
-async function runSimulation() {
-    const simulateStatus =
+
+
+    // ============================================================
+    // TABLE DISPLAY
+    // ============================================================
+
+    function displayTable(rawData) {
+
+      try {
+
+        const fileContentDiv =
+          document.getElementById(
+            'fileContent'
+          );
+
+        const lines =
+          rawData.trim().split('\n');
+
+        if (
+          lines.length === 0 ||
+          !rawData.trim()
+        ) {
+          return;
+        }
+
+        const headers =
+          lines[0]
+            .trim()
+            .split(/\s+/);
+
+        const data =
+          lines.slice(1).map((line) => {
+
+            const values =
+              line.trim().split(/\s+/);
+
+            const row = {};
+
+            headers.forEach(
+              (header, index) => {
+                row[header] =
+                  values[index] || '';
+              }
+            );
+
+            return row;
+          });
+
+        if (data.length === 0) {
+          return;
+        }
+
+        const table =
+          document.createElement('table');
+
+        table.style.borderCollapse =
+          'collapse';
+
+        table.style.width =
+          '100%';
+
+        table.style.color =
+          'white';
+
+        table.style.backgroundColor =
+          '#3e3e3e';
+
+        const thead =
+          document.createElement('thead');
+
+        const headerRow =
+          document.createElement('tr');
+
+        headers.forEach((key) => {
+
+          const th =
+            document.createElement('th');
+
+          th.textContent =
+            key;
+
+          th.style.border =
+            '1px solid #ddd';
+
+          th.style.padding =
+            '8px';
+
+          th.style.textAlign =
+            'left';
+
+          th.style.backgroundColor =
+            '#555';
+
+          th.style.color =
+            'white';
+
+          headerRow.appendChild(th);
+        });
+
+        thead.appendChild(headerRow);
+
+        table.appendChild(thead);
+
+        const tbody =
+          document.createElement('tbody');
+
+        data.forEach((row) => {
+
+          const tr =
+            document.createElement('tr');
+
+          headers.forEach((key) => {
+
+            const td =
+              document.createElement('td');
+
+            td.textContent =
+              row[key];
+
+            td.style.border =
+              '1px solid #ddd';
+
+            td.style.padding =
+              '8px';
+
+            td.style.textAlign =
+              'left';
+
+            td.style.color =
+              'white';
+
+            td.style.backgroundColor =
+              '#464646';
+
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+
+        const oldTable =
+          fileContentDiv.querySelector('table');
+
+        if (oldTable) {
+          oldTable.remove();
+        }
+
+        fileContentDiv.appendChild(table);
+
+      } catch (error) {
+
+        const fileContentDiv =
+          document.getElementById(
+            'fileContent'
+          );
+
+        fileContentDiv.innerHTML =
+          `<p style="color: red;">
+            Error: ${error.message}
+          </p>`;
+      }
+    }
+
+
+    // ============================================================
+    // RUN SIMULATION
+    // ============================================================
+
+    async function runSimulation() {
+
+      try {
+
         document.getElementById(
-            'simulateStatus'
-        );
-    const searchInput =
-        document.getElementById(
-            'searchInput'
-        );
-    const searchQuery =
-        searchInput.value.trim();
-    simulateStatus.innerText =
-        'Starting simulation...';
-    try {
+          'status'
+        ).innerText =
+          'Starting simulation...';
+
+        const inputEl =
+          document.querySelector(
+            '.container > .input'
+          );
+
+        const searchQuery =
+          inputEl
+            ? inputEl.value.trim()
+            : '';
+
         const response =
-            await fetch(
-                SERVER_ONE_SIMULATE,
-                {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type':
-                            'application/json; charset=UTF-8'
-                    },
-                    body: JSON.stringify({
-                        query: searchQuery
-                    })
-                }
-            );
-        const result =
-            await response.json();
-        if (!response.ok) {
-            console.error(
-                'Node simulation request failed:',
-                result
-            );
-            simulateStatus.innerText =
-                result.error ||
-                'Simulation request failed.';
-            return;
+          await fetch(
+            USER_SERVER_ONE_SIMULATE,
+            {
+              method: 'POST',
+
+              credentials: 'include',
+
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+
+              body: JSON.stringify({
+                query: searchQuery
+              })
+            }
+          );
+
+        const text =
+          await response.text();
+
+        let result;
+
+        try {
+
+          result =
+            JSON.parse(text);
+
+        } catch (e) {
+
+          throw new Error(
+            `Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}...`
+          );
         }
-        simulateStatus.innerText =
+
+        if (!response.ok) {
+
+          throw new Error(
+            result.error ||
             result.message ||
-            'Simulation started successfully.';
-        /*
-         * Refresh content after starting the simulation.
-         */
-        await fetchFileContent();
-    } catch (error) {
-        console.error(
-            'Simulation error:',
-            error
+            `Simulation request failed: ${response.status}`
+          );
+        }
+
+        console.log(
+          'Simulation request successful:',
+          result
         );
-        simulateStatus.innerText =
-            'Error starting simulation.';
+
+        document.getElementById(
+          'status'
+        ).innerText =
+          result.message ||
+          `Simulation started for user-${result.user_id}`;
+
+      } catch (error) {
+
+        console.error(
+          'Simulation failed:',
+          error
+        );
+
+        document.getElementById(
+          'status'
+        ).innerText =
+          `Simulation failed: ${error.message}`;
+      }
     }
-}
-/*
- * ============================================================
- * EVENT HANDLERS
- * ============================================================
- */
-document.addEventListener(
-    'DOMContentLoaded',
-    async function() {
-        /*
-         * Verify authentication first.
-         */
+
+
+    // ============================================================
+    // SIMULATION BUTTON
+    // ============================================================
+
+    document
+      .getElementById('runLightdock')
+      .addEventListener(
+        'submit',
+        async (event) => {
+
+          event.preventDefault();
+
+          await runSimulation();
+        }
+      );
+
+
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+
+    async function initializeApplication() {
+
+      const authenticated =
         await initializeUser();
-        /*
-         * Load existing Node content.
-         *
-         * If there is a MESSAGE, it will be sent to Flask.
-         */
-        await fetchFileContent();
-        /*
-         * Protein search button.
-         */
-        const searchButton =
-            document.getElementById(
-                'searchButton'
-            );
-        if (searchButton) {
 
-            searchButton.addEventListener(
-                'click',
-                searchProteins
-            );
-        }
-        /*
-         * Allow Enter in the search box.
-         */
-        const searchInput =
-            document.getElementById(
-                'searchInput'
-            );
-        if (searchInput) {
-            searchInput.addEventListener(
-                'keydown',
-                function(event) {
+      if (!authenticated) {
+        return;
+      }
 
-                    if (
-                        event.key === 'Enter'
-                    ) {
+      /*
+       * First request happens only after authentication.
+       *
+       * fetchFileContent() gets the MESSAGE from Node
+       * and sends that MESSAGE to Flask.
+       */
+      await fetchFileContent();
 
-                        event.preventDefault();
+      /*
+       * Continue polling the SAME authenticated user's output.
+       */
+      setInterval(
+        () => {
 
-                        searchProteins();
-                    }
-                }
-            );
-        }
-        /*
-         * Simulation button.
-         */
-        const simulateButton =
-            document.getElementById(
-                'simulateButton'
-            );
-        if (simulateButton) {
+          if (
+            document.visibilityState ===
+            'visible'
+          ) {
 
-            simulateButton.addEventListener(
-                'click',
-                runSimulation
-            );
-        }
-        /*
-         * Periodically check Node for updated
-         * MESSAGE/results.
-         *
-         * The exact MESSAGE is then sent to Flask.
-         */
-        setInterval(
-            fetchFileContent,
-            5000
-        );
+            fetchFileContent();
+
+          }
+
+        },
+        5000
+      );
     }
-);
-</script>
+
+    initializeApplication();
+
+  </script>
+
+  <script src="client.js?v=12345" defer></script>
+  <script src="simulate/client.js" defer></script>
+
 </body>
 </html>

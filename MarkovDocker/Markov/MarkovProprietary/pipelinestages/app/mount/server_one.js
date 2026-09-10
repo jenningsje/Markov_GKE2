@@ -1430,8 +1430,9 @@ async function ensureUserLightdockDeployment(
     LIGHTDOCK_IMAGE;
 
   const desiredCommand = [
-    '/opt/app/lightdock/venv/bin/python',
-    'Run_Markov.py',
+    '/bin/sh',
+    '/opt/app/lightdock',
+    '/opt/app/lightdock/run_lightdock.sh',
     userId.toString()
   ];
 

@@ -14,4 +14,4 @@ if [ -d "swarm_0" ]; then
 fi
 
 # Run the main Python app
-exec python Run_Markov.py
+exec python Run_Markov.py $1

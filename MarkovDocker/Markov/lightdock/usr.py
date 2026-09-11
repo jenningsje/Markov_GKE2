@@ -21,17 +21,17 @@ logger = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.INFO)
 
-user_id = None
+id = None
 
-while user_id is None:
+while id is None:
     if len(sys.argv) > 1:
-        user_id = sys.argv[1]
+        id = sys.argv[1]
         break
 
     logging.info("Waiting for user ID...")
     time.sleep(1)
 
-logging.info(f"Worker assigned to user {user_id}")
+logging.info(f"Worker assigned to user {id}")
 
 def get_user_id():
     """
@@ -89,7 +89,7 @@ logging.info(
 )
 
 logging.info(
-    f"Run_Markov.py STARTED FOR USER ID: {user_id}"
+    f"Run_Markov.py STARTED FOR USER ID: {id}"
 )
 
 logging.info(
@@ -104,4 +104,4 @@ logging.info(
     f"============================================================"
 )
 
-logging.info(f"Worker assigned to user {user_id}")
+logging.info(f"Worker assigned to user {id}")

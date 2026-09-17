@@ -37,7 +37,7 @@ const MARKOV_WORKER_NODE =
   'gke-markov-cluster-markov-pool-bf1302c9-sc8m';
 
 const LIGHTDOCK_IMAGE =
-  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:v69';
+  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:v70';
 
 const DOWNLOADAPP_IMAGE =
   'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/downloadapp:v32';

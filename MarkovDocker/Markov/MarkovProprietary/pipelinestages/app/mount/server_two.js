@@ -5,7 +5,7 @@ const https = require('https');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const app = express();
-const PORT = 80;
+const PORT = 3001;
 
 // Middleware setup
 app.use(express.json());

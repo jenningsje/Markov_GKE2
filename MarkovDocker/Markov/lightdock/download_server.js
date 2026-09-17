@@ -3,23 +3,21 @@ const { spawn } = require('child_process');
 const cwd =
   '/opt/app/MarkovProprietary/pipelinestages/app/mount';
 
-function runServer(script, callback) {
+function runServer(script) {
   const child = spawn('node', [script], {
     cwd,
     stdio: 'inherit'
   });
 
   child.on('error', (error) => {
-    callback(error);
+    console.error(`${script} error:`);
+    console.error(error);
   });
 
-  // Do NOT exit this launcher when the child exits.
   child.on('exit', (code, signal) => {
     if (code !== 0) {
-      callback(
-        new Error(
-          `${script} exited with code ${code}, signal ${signal}`
-        )
+      console.error(
+        `${script} exited with code ${code}, signal ${signal}`
       );
     }
   });
@@ -27,29 +25,9 @@ function runServer(script, callback) {
   return child;
 }
 
-console.log('Trying run_user_id_server_two.js...');
+console.log('Starting server_two.js...');
 
-const first = runServer('run_user_id_server_two.js', (error) => {
-  console.error('run_user_id_server_two.js error:');
-  console.error(error);
+runServer('server_two.js');
 
-  console.log('Trying server_two.js...');
-
-  const second = runServer(
-    'server_two.js',
-    (error) => {
-      console.error(
-        'server_two.js error:'
-      );
-      console.error(error);
-
-      // Keep this launcher running.
-      console.log(
-        'Both server attempts have failed, but launcher remains running.'
-      );
-    }
-  );
-});
-
-// Keep the main Node process alive.
+// Keep the launcher running.
 process.stdin.resume();

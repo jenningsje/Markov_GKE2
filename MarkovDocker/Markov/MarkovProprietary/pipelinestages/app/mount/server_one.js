@@ -49,7 +49,7 @@ const LIGHTDOCK_IMAGE =
   'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/lightdock:v69';
 
 const DOWNLOADAPP_IMAGE =
-  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/downloadapp:v30';
+  'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/downloadapp:v32';
 
 const VIEWER_IMAGE =
   'us-central1-docker.pkg.dev/project-05da6024-aca6-464e-bd3/markov-repo/viewer:latest';
@@ -694,7 +694,6 @@ function getCodelVolumes() {
   ];
 }
 
-
 // ============================================================
 // USER APP DEPLOYMENT
 // ============================================================
@@ -706,712 +705,549 @@ async function ensureUserAppDeployment(
   servicePort,
   containerPort
 ) {
-  const name =
-    `${appName}-${userId}`.toLowerCase();
+  const normalizedUserId = String(userId).trim();
+  const name = `${appName}-${normalizedUserId}`.toLowerCase();
 
-  const labelSelector =
-    getUserWorkerLabels(
-      name,
-      userId
-    );
+  const labelSelector = getUserWorkerLabels(
+    name,
+    normalizedUserId
+  );
 
   console.log(
     '============================================================'
   );
-
   console.log(
-    `[USER ${userId}] ENSURE APP: ${name}`
+    `[USER ${normalizedUserId}] ENSURE APP: ${name}`
   );
-
   console.log(
-    `[USER ${userId}] Image: ${imageName}`
+    `[USER ${normalizedUserId}] Image: ${imageName}`
   );
-
   console.log(
-    `[USER ${userId}] Service Port: ${servicePort}`
+    `[USER ${normalizedUserId}] Service Port: ${servicePort}`
   );
-
   console.log(
-    `[USER ${userId}] Container Port: ${containerPort}`
+    `[USER ${normalizedUserId}] Container Port: ${containerPort}`
   );
-
   console.log(
-    `[USER ${userId}] Workspace: user-${userId}`
+    `[USER ${normalizedUserId}] Workspace: user-${normalizedUserId}`
   );
-
   console.log(
-    `[USER ${userId}] Node: ${MARKOV_WORKER_NODE}`
+    `[USER ${normalizedUserId}] Node: ${MARKOV_WORKER_NODE}`
   );
-
   console.log(
     '============================================================'
   );
 
   let desiredVolumeMounts = [
-    getUserVolumeMount(
-      userId
-    )
+    getUserVolumeMount(normalizedUserId)
   ];
 
-  let desiredVolumes =
-    getUserVolumes();
+  let desiredVolumes = getUserVolumes();
 
   let desiredEnv = [];
 
-  if (
-    appName === 'codel'
-  ) {
-    desiredVolumeMounts =
-      getCodelVolumeMounts(
-        userId
-      );
+  // ----------------------------------------------------------
+  // CODEL SPECIAL CONFIGURATION
+  // ----------------------------------------------------------
 
-    desiredVolumes =
-      getCodelVolumes();
+  if (appName === 'codel') {
+    desiredVolumeMounts = getCodelVolumeMounts(
+      normalizedUserId
+    );
+
+    desiredVolumes = getCodelVolumes();
 
     desiredEnv = [
       {
-        name:
-          'CODEL_BROWSER_NAME',
-
-        value:
-          `codel-browser-${userId}`
+        name: 'CODEL_BROWSER_NAME',
+        value: `codel-browser-${normalizedUserId}`
       }
     ];
 
     console.log(
-      `[USER ${userId}] ${name} is CODEL`
+      `[USER ${normalizedUserId}] ${name} is CODEL`
     );
 
     console.log(
-      `[USER ${userId}] CODEL_BROWSER_NAME=codel-browser-${userId}`
+      `[USER ${normalizedUserId}] CODEL_BROWSER_NAME=codel-browser-${normalizedUserId}`
     );
   }
+
+  // ==========================================================
+  // ENSURE DEPLOYMENT
+  // ==========================================================
+
+  let existingDeployment = null;
 
   try {
-    let existingDeployment =
-      null;
-
-    try {
-      const result =
-        await k8sAppsApi.readNamespacedDeployment({
-          name,
-          namespace:
-            NAMESPACE
-        });
-
-      existingDeployment =
-        result.body;
-
-    } catch (err) {
-      const statusCode =
-        getKubernetesStatusCode(
-          err
-        );
-
-      console.log(
-        `[USER ${userId}] read deployment ${name} status=${statusCode}`
-      );
-
-      if (
-        Number(statusCode) ===
-        404
-      ) {
-        existingDeployment =
-          null;
-
-      } else {
-        throw err;
-      }
-    }
-
-    if (
-      !existingDeployment
-    ) {
-      console.log(
-        `[USER ${userId}] Creating deployment ${name}`
-      );
-
-      const deploymentManifest = {
-        apiVersion:
-          'apps/v1',
-
-        kind:
-          'Deployment',
-
-        metadata: {
-          name,
-
-          namespace:
-            NAMESPACE,
-
-          labels:
-            labelSelector
-        },
-
-        spec: {
-          replicas:
-            1,
-
-          selector: {
-            matchLabels:
-              labelSelector
-          },
-
-          template: {
-            metadata: {
-              labels:
-                labelSelector
-            },
-
-            spec: {
-              nodeName:
-                MARKOV_WORKER_NODE,
-
-              containers: [
-                {
-                  name:
-                    appName,
-
-                  image:
-                    imageName,
-
-                  env:
-                    desiredEnv,
-
-                  ports: [
-                    {
-                      containerPort
-                    }
-                  ],
-
-                  volumeMounts:
-                    desiredVolumeMounts
-                }
-              ],
-
-              volumes:
-                desiredVolumes
-            }
-          }
-        }
-      };
-
-      try {
-        await k8sAppsApi.createNamespacedDeployment({
-          namespace:
-            NAMESPACE,
-
-          body:
-            deploymentManifest
-        });
-
-        console.log(
-          `[USER ${userId}] Deployment ${name} created`
-        );
-
-      } catch (createErr) {
-        const statusCode =
-          getKubernetesStatusCode(
-            createErr
-          );
-
-        if (
-          Number(statusCode) ===
-          409
-        ) {
-          console.log(
-            `[USER ${userId}] Deployment ${name} was created concurrently; continuing`
-          );
-        } else {
-          throw createErr;
-        }
-      }
-
-    } else {
-      const existingPodSpec =
-        existingDeployment
-          .spec
-          ?.template
-          ?.spec;
-
-      const existingContainer =
-        existingPodSpec
-          ?.containers
-          ?.find(
-            container =>
-              container.name ===
-              appName
-          );
-
-      const existingReplicas =
-        existingDeployment
-          .spec
-          ?.replicas;
-
-      const existingImage =
-        existingContainer
-          ?.image;
-
-      const existingNodeName =
-        existingPodSpec
-          ?.nodeName;
-
-      const existingMount =
-        existingContainer
-          ?.volumeMounts
-          ?.find(
-            mount =>
-              mount.name ===
-              'markov-app'
-          );
-
-      const existingSubPath =
-        existingMount?.subPath;
-
-      const desiredSubPath =
-        `user-${userId}`;
-
-      const existingPort =
-        existingContainer
-          ?.ports
-          ?.find(
-            port =>
-              port.containerPort ===
-              containerPort
-          );
-
-      let needsDockerSocket =
-        false;
-
-      if (
-        appName === 'codel'
-      ) {
-        const existingDockerMount =
-          existingContainer
-            ?.volumeMounts
-            ?.find(
-              mount =>
-                mount.name ===
-                'docker-sock'
-            );
-
-        const existingDockerVolume =
-          existingPodSpec
-            ?.volumes
-            ?.find(
-              volume =>
-                volume.name ===
-                'docker-sock'
-            );
-
-        needsDockerSocket =
-          !existingDockerMount ||
-          existingDockerMount.mountPath !==
-            '/var/run/docker.sock' ||
-          !existingDockerVolume ||
-          existingDockerVolume
-            ?.hostPath
-            ?.path !==
-              '/var/run/docker.sock' ||
-          existingDockerVolume
-            ?.hostPath
-            ?.type !==
-              'Socket';
-
-        console.log(
-          `[USER ${userId}] docker socket mount=${
-            existingDockerMount?.mountPath ||
-            '<none>'
-          }`
-        );
-
-        console.log(
-          `[USER ${userId}] docker socket volume=${
-            existingDockerVolume
-              ?.hostPath
-              ?.path ||
-            '<none>'
-          }`
-        );
-      }
-
-      let needsCodelBrowserEnv =
-        false;
-
-      if (
-        appName === 'codel'
-      ) {
-        const existingBrowserEnv =
-          existingContainer
-            ?.env
-            ?.find(
-              env =>
-                env.name ===
-                'CODEL_BROWSER_NAME'
-            );
-
-        needsCodelBrowserEnv =
-          !existingBrowserEnv ||
-          existingBrowserEnv.value !==
-            `codel-browser-${userId}`;
-
-        console.log(
-          `[USER ${userId}] CODEL_BROWSER_NAME=${
-            existingBrowserEnv?.value ||
-            '<none>'
-          }`
-        );
-      }
-
-      const needsCorrection =
-        existingReplicas !==
-          1 ||
-        existingImage !==
-          imageName ||
-        existingNodeName !==
-          MARKOV_WORKER_NODE ||
-        existingSubPath !==
-          desiredSubPath ||
-        !existingContainer ||
-        !existingPort ||
-        needsDockerSocket ||
-        needsCodelBrowserEnv;
-
-      console.log(
-        `[USER ${userId}] ${name} exists`
-      );
-
-      console.log(
-        `[USER ${userId}] replicas=${existingReplicas}`
-      );
-
-      console.log(
-        `[USER ${userId}] image=${existingImage}`
-      );
-
-      console.log(
-        `[USER ${userId}] node=${existingNodeName}`
-      );
-
-      console.log(
-        `[USER ${userId}] workspace=${existingSubPath}`
-      );
-
-      if (
-        needsCorrection
-      ) {
-        console.log(
-          `[USER ${userId}] RECONCILING ${name}`
-        );
-
-        existingDeployment
-          .spec
-          .replicas =
-            1;
-
-        existingDeployment
-          .spec
-          .template
-          .spec
-          .nodeName =
-            MARKOV_WORKER_NODE;
-
-        existingDeployment
-          .spec
-          .template
-          .spec
-          .containers = [
-            {
-              name:
-                appName,
-
-              image:
-                imageName,
-
-              env:
-                desiredEnv,
-
-              ports: [
-                {
-                  containerPort
-                }
-              ],
-
-              volumeMounts:
-                desiredVolumeMounts
-            }
-          ];
-
-        existingDeployment
-          .spec
-          .template
-          .spec
-          .volumes =
-            desiredVolumes;
-
-        existingDeployment
-          .spec
-          .selector
-          .matchLabels =
-            labelSelector;
-
-        existingDeployment
-          .spec
-          .template
-          .metadata
-          .labels =
-            labelSelector;
-
-        existingDeployment
-          .metadata
-          .labels =
-            labelSelector;
-
-        await k8sAppsApi.replaceNamespacedDeployment({
-          name,
-
-          namespace:
-            NAMESPACE,
-
-          body:
-            existingDeployment
-        });
-
-        console.log(
-          `[USER ${userId}] ${name} reconciled`
-        );
-
-      } else {
-        console.log(
-          `[USER ${userId}] ${name} already correct`
-        );
-      }
-    }
-
-
-    // ========================================================
-    // ENSURE SERVICE EXISTS AND IS CORRECT
-    // ========================================================
-
-    let existingService =
-      null;
-
-    try {
-      const result =
-        await k8sApi.readNamespacedService({
-          name,
-
-          namespace:
-            NAMESPACE
-        });
-
-      existingService =
-        result.body;
-
-    } catch (err) {
-      const statusCode =
-        getKubernetesStatusCode(
-          err
-        );
-
-      console.log(
-        `[USER ${userId}] read service ${name} status=${statusCode}`
-      );
-
-      if (
-        Number(statusCode) !==
-        404
-      ) {
-        throw err;
-      }
-    }
-
-    if (
-      !existingService
-    ) {
-      const serviceManifest = {
-        apiVersion:
-          'v1',
-
-        kind:
-          'Service',
-
-        metadata: {
-          name,
-
-          namespace:
-            NAMESPACE
-        },
-
-        spec: {
-          selector:
-            labelSelector,
-
-          ports: [
-            {
-              port:
-                servicePort,
-
-              targetPort:
-                containerPort
-            }
-          ]
-        }
-      };
-
-      try {
-        await k8sApi.createNamespacedService({
-          namespace:
-            NAMESPACE,
-
-          body:
-            serviceManifest
-        });
-
-        console.log(
-          `[USER ${userId}] Service ${name} created`
-        );
-
-      } catch (serviceErr) {
-        const statusCode =
-          getKubernetesStatusCode(
-            serviceErr
-          );
-
-        if (Number(statusCode) === 409) {
-          console.log(
-            `[USER ${userId}] ${name} was created concurrently; re-reading`
-          );
-
-          const reread =
-            await k8sAppsApi.readNamespacedDeployment({
-              name,
-              namespace: NAMESPACE
-            });
-
-          const actual =
-            reread.body;
-
-          const actualContainer =
-            actual.spec.template.spec.containers[0];
-
-          console.log(
-            `[USER ${userId}] POST-409 command: ${
-              JSON.stringify(actualContainer.command)
-            }`
-          );
-
-          console.log(
-            `[USER ${userId}] POST-409 args: ${
-              JSON.stringify(actualContainer.args)
-            }`
-          );
-
-          if (
-            JSON.stringify(actualContainer.command) !==
-              JSON.stringify(desiredCommand) ||
-
-            JSON.stringify(actualContainer.args) !==
-              JSON.stringify(desiredArgs)
-          ) {
-            await k8sAppsApi.replaceNamespacedDeployment({
-              name,
-              namespace: NAMESPACE,
-              body: deployment
-            });
-          }
-        } else {
-          throw serviceErr;
-        }
-      }
-
-    } else {
-      console.log(
-        `[USER ${userId}] Service ${name} already exists`
-      );
-
-      console.log(
-        `[USER ${userId}] RECONCILING SERVICE ${name}`
-      );
-
-      const existingServicePort =
-        existingService
-          .spec
-          ?.ports
-          ?.find(
-            port =>
-              port.port ===
-              servicePort
-          );
-
-      const serviceNeedsCorrection =
-        !existingServicePort ||
-        existingServicePort.targetPort !==
-          containerPort ||
-        JSON.stringify(
-          existingService.spec.selector
-        ) !==
-          JSON.stringify(
-            labelSelector
-          );
-
-      if (
-        serviceNeedsCorrection
-      ) {
-        existingService.spec.selector =
-          labelSelector;
-
-        existingService.spec.ports = [
-          {
-            port:
-              servicePort,
-
-            targetPort:
-              containerPort
-          }
-        ];
-
-        await k8sApi.replaceNamespacedService({
-          name,
-
-          namespace:
-            NAMESPACE,
-
-          body:
-            existingService
-        });
-      }
-
-      console.log(
-        `[USER ${userId}] SERVICE ${name} RECONCILED`
-      );
-    }
+    const result =
+      await k8sAppsApi.readNamespacedDeployment({
+        name,
+        namespace: NAMESPACE
+      });
+
+    existingDeployment = result.body;
 
   } catch (err) {
-    console.error(
-      `[USER ${userId}] FAILED ENSURING ${name}`
+    const statusCode =
+      getKubernetesStatusCode(err);
+
+    console.log(
+      `[USER ${normalizedUserId}] read deployment ${name} status=${statusCode}`
     );
 
-    console.error(
-      'Kubernetes status code:',
-      getKubernetesStatusCode(
-        err
-      ) ||
-        'unknown'
+    if (Number(statusCode) !== 404) {
+      throw err;
+    }
+  }
+
+  // ==========================================================
+  // CREATE DEPLOYMENT IF MISSING
+  // ==========================================================
+
+  if (!existingDeployment) {
+    console.log(
+      `[USER ${normalizedUserId}] Creating deployment ${name}`
     );
 
-    console.error(
-      'Kubernetes response body:',
-      err.body ||
-        err.response?.body ||
-        'none'
+    const deploymentManifest = {
+      apiVersion: 'apps/v1',
+      kind: 'Deployment',
+
+      metadata: {
+        name,
+        namespace: NAMESPACE,
+        labels: labelSelector
+      },
+
+      spec: {
+        replicas: 1,
+
+        selector: {
+          matchLabels: labelSelector
+        },
+
+        template: {
+          metadata: {
+            labels: labelSelector
+          },
+
+          spec: {
+            nodeName: MARKOV_WORKER_NODE,
+
+            containers: [
+              {
+                name: appName,
+                image: imageName,
+                env: desiredEnv,
+
+                ports: [
+                  {
+                    containerPort
+                  }
+                ],
+
+                volumeMounts: desiredVolumeMounts
+              }
+            ],
+
+            volumes: desiredVolumes
+          }
+        }
+      }
+    };
+
+    try {
+      await k8sAppsApi.createNamespacedDeployment({
+        namespace: NAMESPACE,
+        body: deploymentManifest
+      });
+
+      console.log(
+        `[USER ${normalizedUserId}] Deployment ${name} created`
+      );
+
+    } catch (createErr) {
+      const statusCode =
+        getKubernetesStatusCode(createErr);
+
+      if (Number(statusCode) === 409) {
+        console.log(
+          `[USER ${normalizedUserId}] Deployment ${name} was created concurrently; re-reading`
+        );
+
+        const reread =
+          await k8sAppsApi.readNamespacedDeployment({
+            name,
+            namespace: NAMESPACE
+          });
+
+        existingDeployment = reread.body;
+
+      } else {
+        throw createErr;
+      }
+    }
+  }
+
+  // ==========================================================
+  // RECONCILE EXISTING DEPLOYMENT
+  // ==========================================================
+
+  if (existingDeployment) {
+    const podSpec =
+      existingDeployment.spec?.template?.spec;
+
+    const existingContainer =
+      podSpec?.containers?.find(
+        container =>
+          container.name === appName
+      );
+
+    const existingReplicas =
+      existingDeployment.spec?.replicas;
+
+    const existingImage =
+      existingContainer?.image;
+
+    const existingNodeName =
+      podSpec?.nodeName;
+
+    const existingMount =
+      existingContainer?.volumeMounts?.find(
+        mount =>
+          mount.name === 'markov-app'
+      );
+
+    const existingSubPath =
+      existingMount?.subPath;
+
+    const existingMountPath =
+      existingMount?.mountPath;
+
+    const desiredSubPath =
+      `user-${normalizedUserId}`;
+
+    const desiredMountPath =
+      '/opt/app/MarkovProprietary/pipelinestages/app/mount';
+
+    // --------------------------------------------------------
+    // CODEL DOCKER SOCKET CHECK
+    // --------------------------------------------------------
+
+    let needsDockerSocket = false;
+
+    if (appName === 'codel') {
+      const existingDockerMount =
+        existingContainer?.volumeMounts?.find(
+          mount =>
+            mount.name === 'docker-sock'
+        );
+
+      const existingDockerVolume =
+        podSpec?.volumes?.find(
+          volume =>
+            volume.name === 'docker-sock'
+        );
+
+      needsDockerSocket =
+        !existingDockerMount ||
+        existingDockerMount.mountPath !==
+          '/var/run/docker.sock' ||
+        !existingDockerVolume ||
+        existingDockerVolume?.hostPath?.path !==
+          '/var/run/docker.sock' ||
+        existingDockerVolume?.hostPath?.type !==
+          'Socket';
+
+      console.log(
+        `[USER ${normalizedUserId}] docker socket mount=${
+          existingDockerMount?.mountPath || '<none>'
+        }`
+      );
+
+      console.log(
+        `[USER ${normalizedUserId}] docker socket volume=${
+          existingDockerVolume?.hostPath?.path || '<none>'
+        }`
+      );
+    }
+
+    // --------------------------------------------------------
+    // CODEL BROWSER ENV CHECK
+    // --------------------------------------------------------
+
+    let needsCodelBrowserEnv = false;
+
+    if (appName === 'codel') {
+      const existingBrowserEnv =
+        existingContainer?.env?.find(
+          env =>
+            env.name === 'CODEL_BROWSER_NAME'
+        );
+
+      needsCodelBrowserEnv =
+        !existingBrowserEnv ||
+        existingBrowserEnv.value !==
+          `codel-browser-${normalizedUserId}`;
+
+      console.log(
+        `[USER ${normalizedUserId}] CODEL_BROWSER_NAME=${
+          existingBrowserEnv?.value || '<none>'
+        }`
+      );
+    }
+
+    // --------------------------------------------------------
+    // PORT CHECK
+    // --------------------------------------------------------
+
+    const existingPort =
+      existingContainer?.ports?.find(
+        port =>
+          port.containerPort === containerPort
+      );
+
+    // --------------------------------------------------------
+    // DETERMINE WHETHER RECONCILIATION IS NEEDED
+    // --------------------------------------------------------
+
+    const needsCorrection =
+      !existingContainer ||
+      existingReplicas !== 1 ||
+      existingImage !== imageName ||
+      existingNodeName !== MARKOV_WORKER_NODE ||
+      existingMountPath !== desiredMountPath ||
+      existingSubPath !== desiredSubPath ||
+      !existingPort ||
+      needsDockerSocket ||
+      needsCodelBrowserEnv;
+
+    console.log(
+      `[USER ${normalizedUserId}] ${name} exists`
     );
 
-    throw err;
+    console.log(
+      `[USER ${normalizedUserId}] replicas=${existingReplicas}`
+    );
+
+    console.log(
+      `[USER ${normalizedUserId}] image=${existingImage}`
+    );
+
+    console.log(
+      `[USER ${normalizedUserId}] node=${existingNodeName}`
+    );
+
+    console.log(
+      `[USER ${normalizedUserId}] workspace=${existingSubPath}`
+    );
+
+    // --------------------------------------------------------
+    // RECONCILE
+    // --------------------------------------------------------
+
+    if (needsCorrection) {
+      console.log(
+        `[USER ${normalizedUserId}] RECONCILING ${name}`
+      );
+
+      existingDeployment.spec.replicas = 1;
+
+      existingDeployment.spec.selector = {
+        matchLabels: labelSelector
+      };
+
+      existingDeployment.spec.template.metadata = {
+        ...existingDeployment.spec.template.metadata,
+        labels: labelSelector
+      };
+
+      existingDeployment.metadata.labels = {
+        ...existingDeployment.metadata.labels,
+        ...labelSelector
+      };
+
+      existingDeployment.spec.template.spec = {
+        ...existingDeployment.spec.template.spec,
+
+        nodeName: MARKOV_WORKER_NODE,
+
+        containers: [
+          {
+            name: appName,
+            image: imageName,
+            env: desiredEnv,
+
+            ports: [
+              {
+                containerPort
+              }
+            ],
+
+            volumeMounts: desiredVolumeMounts
+          }
+        ],
+
+        volumes: desiredVolumes
+      };
+
+      await k8sAppsApi.replaceNamespacedDeployment({
+        name,
+        namespace: NAMESPACE,
+        body: existingDeployment
+      });
+
+      console.log(
+        `[USER ${normalizedUserId}] ${name} reconciled`
+      );
+
+    } else {
+      console.log(
+        `[USER ${normalizedUserId}] ${name} already correct`
+      );
+    }
+  }
+
+  // ==========================================================
+  // ENSURE SERVICE EXISTS
+  // ==========================================================
+
+  let existingService = null;
+
+  try {
+    const result =
+      await k8sApi.readNamespacedService({
+        name,
+        namespace: NAMESPACE
+      });
+
+    existingService = result.body;
+
+  } catch (err) {
+    const statusCode =
+      getKubernetesStatusCode(err);
+
+    console.log(
+      `[USER ${normalizedUserId}] read service ${name} status=${statusCode}`
+    );
+
+    if (Number(statusCode) !== 404) {
+      throw err;
+    }
+  }
+
+  // ==========================================================
+  // CREATE SERVICE
+  // ==========================================================
+
+  if (!existingService) {
+    console.log(
+      `[USER ${normalizedUserId}] Creating service ${name}`
+    );
+
+    const serviceManifest = {
+      apiVersion: 'v1',
+
+      kind: 'Service',
+
+      metadata: {
+        name,
+        namespace: NAMESPACE
+      },
+
+      spec: {
+        selector: labelSelector,
+
+        ports: [
+          {
+            port: servicePort,
+            targetPort: containerPort
+          }
+        ]
+      }
+    };
+
+    try {
+      await k8sApi.createNamespacedService({
+        namespace: NAMESPACE,
+        body: serviceManifest
+      });
+
+      console.log(
+        `[USER ${normalizedUserId}] Service ${name} created`
+      );
+
+    } catch (serviceErr) {
+      const statusCode =
+        getKubernetesStatusCode(serviceErr);
+
+      if (Number(statusCode) === 409) {
+        console.log(
+          `[USER ${normalizedUserId}] Service ${name} was created concurrently; continuing`
+        );
+      } else {
+        throw serviceErr;
+      }
+    }
+
+  } else {
+
+    // ========================================================
+    // RECONCILE EXISTING SERVICE
+    // ========================================================
+
+    console.log(
+      `[USER ${normalizedUserId}] Service ${name} already exists`
+    );
+
+    const existingServicePort =
+      existingService.spec?.ports?.find(
+        port =>
+          port.port === servicePort
+      );
+
+    const serviceNeedsCorrection =
+      !existingServicePort ||
+      String(existingServicePort.targetPort) !==
+        String(containerPort) ||
+      JSON.stringify(
+        existingService.spec.selector
+      ) !==
+        JSON.stringify(labelSelector);
+
+    if (serviceNeedsCorrection) {
+      console.log(
+        `[USER ${normalizedUserId}] RECONCILING SERVICE ${name}`
+      );
+
+      existingService.spec.selector =
+        labelSelector;
+
+      existingService.spec.ports = [
+        {
+          port: servicePort,
+          targetPort: containerPort
+        }
+      ];
+
+      await k8sApi.replaceNamespacedService({
+        name,
+        namespace: NAMESPACE,
+        body: existingService
+      });
+
+      console.log(
+        `[USER ${normalizedUserId}] SERVICE ${name} RECONCILED`
+      );
+
+    } else {
+      console.log(
+        `[USER ${normalizedUserId}] SERVICE ${name} already correct`
+      );
+    }
   }
 }
-
 
 // ============================================================
 // PERSISTENT LIGHTDOCK WORKER

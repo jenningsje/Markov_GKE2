@@ -1,57 +1,55 @@
 import os
 import logging
-import time
 import sys
+
+
+# ============================================================
+# LOGGING
+# ============================================================
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler(),
+    ],
+)
+
+logger = logging.getLogger(__name__)
+
 
 # ============================================================
 # USER ID
 # ============================================================
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,  # Set the log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Log message format
-    handlers=[
-        logging.FileHandler("app.log"),  # Log to a file
-        logging.StreamHandler()  # Log to the console
-    ]
-)
-
-logger = logging.getLogger(__name__)
-
-logging.basicConfig(level=logging.INFO)
-
-id = None
-
-while id is None:
-    if len(sys.argv) > 1:
-        id = sys.argv[1]
-        break
-
-    logging.info("Waiting for user ID...")
-    time.sleep(1)
-
-logging.info(f"Worker assigned to user {id}")
-
 def get_user_id():
     """
-    Run_Markov.py MUST receive a user ID.
+    Get and validate the user ID assigned to this LightDock worker.
 
-    The Node/Kubernetes layer passes it as argv[1].
+    The Kubernetes/Node layer must pass the user ID as argv[1].
+
     MARKOV_USER_ID is also supplied as a secondary safeguard.
 
-    NEVER wait indefinitely for a missing user ID.
+    Examples:
+
+        python Run_Markov.py 1
+        python Run_Markov.py 3
+
+    Both argv[1] and MARKOV_USER_ID must identify the same user
+    when MARKOV_USER_ID is present.
     """
 
-    argv_user_id = None
+    argv_user_id = ""
 
     if len(sys.argv) > 1:
         argv_user_id = str(sys.argv[1]).strip()
 
-    env_user_id = os.environ.get(
-        "MARKOV_USER_ID",
-        ""
-    ).strip()
+    env_user_id = os.environ.get("MARKOV_USER_ID", "").strip()
+
+    # --------------------------------------------------------
+    # argv[1] is mandatory
+    # --------------------------------------------------------
 
     if not argv_user_id:
         logging.critical(
@@ -60,21 +58,40 @@ def get_user_id():
 
         if env_user_id:
             logging.critical(
-                f"MARKOV_USER_ID exists ({env_user_id}) but argv[1] is missing"
+                f"MARKOV_USER_ID exists ({env_user_id}) "
+                "but argv[1] is missing"
             )
 
         raise RuntimeError(
             "Run_Markov.py requires a user ID as argv[1]"
         )
 
+    # --------------------------------------------------------
+    # Validate that the ID is numeric
+    # --------------------------------------------------------
+
+    if not argv_user_id.isdigit():
+        logging.critical(
+            f"FATAL: invalid user ID in argv[1]: {argv_user_id!r}"
+        )
+
+        raise RuntimeError(
+            f"Invalid user ID: {argv_user_id!r}"
+        )
+
+    # --------------------------------------------------------
+    # MARKOV_USER_ID is a secondary safeguard
+    # --------------------------------------------------------
+
     if not env_user_id:
         logging.warning(
             "MARKOV_USER_ID environment variable is missing"
         )
 
-    if env_user_id and env_user_id != argv_user_id:
+    elif env_user_id != argv_user_id:
         logging.critical(
-            f"FATAL: user ID mismatch: argv={argv_user_id}, "
+            f"FATAL: user ID mismatch: "
+            f"argv={argv_user_id}, "
             f"MARKOV_USER_ID={env_user_id}"
         )
 
@@ -82,26 +99,33 @@ def get_user_id():
             "User ID mismatch between argv[1] and MARKOV_USER_ID"
         )
 
+    # --------------------------------------------------------
+    # Final worker identity
+    # --------------------------------------------------------
+
+    logging.info(
+        "============================================================"
+    )
+
+    logging.info(
+        f"Run_Markov.py STARTED FOR USER ID: {argv_user_id}"
+    )
+
+    logging.info(
+        f"sys.argv: {sys.argv}"
+    )
+
+    logging.info(
+        f"MARKOV_USER_ID: "
+        f"{os.environ.get('MARKOV_USER_ID')}"
+    )
+
+    logging.info(
+        "============================================================"
+    )
+
+    logging.info(
+        f"Worker assigned to user {argv_user_id}"
+    )
+
     return argv_user_id
-
-logging.info(
-    f"============================================================"
-)
-
-logging.info(
-    f"Run_Markov.py STARTED FOR USER ID: {id}"
-)
-
-logging.info(
-    f"sys.argv: {sys.argv}"
-)
-
-logging.info(
-    f"MARKOV_USER_ID: {os.environ.get('MARKOV_USER_ID')}"
-)
-
-logging.info(
-    f"============================================================"
-)
-
-logging.info(f"Worker assigned to user {id}")

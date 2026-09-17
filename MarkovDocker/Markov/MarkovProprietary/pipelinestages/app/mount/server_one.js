@@ -23,24 +23,15 @@ const pool = new Pool({
 });
 
 const kc = new k8s.KubeConfig();
-
 kc.loadFromCluster();
 
-const k8sApi =
-  kc.makeApiClient(
-    k8s.CoreV1Api
-  );
-
-const k8sAppsApi =
-  kc.makeApiClient(
-    k8s.AppsV1Api
-  );
+const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
+const k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
 
 const BASE_MOUNT =
   '/opt/app/MarkovProprietary/pipelinestages/app/mount';
 
-const NAMESPACE =
-  'default';
+const NAMESPACE = 'default';
 
 const MARKOV_WORKER_NODE =
   'gke-markov-cluster-markov-pool-bf1302c9-sc8m';
@@ -77,11 +68,7 @@ function getKubernetesStatusCode(err) {
 // AUTHENTICATION
 // ============================================================
 
-function authenticateToken(
-  req,
-  res,
-  next
-) {
+function authenticateToken(req, res, next) {
   const token =
     req.cookies.token ||
     (
@@ -97,17 +84,15 @@ function authenticateToken(
     );
 
     return res.status(401).json({
-      message:
-        'Authentication required'
+      message: 'Authentication required'
     });
   }
 
   try {
-    const decoded =
-      jwt.verify(
-        token,
-        JWT_SECRET
-      );
+    const decoded = jwt.verify(
+      token,
+      JWT_SECRET
+    );
 
     req.user = decoded;
 
@@ -120,8 +105,7 @@ function authenticateToken(
     );
 
     return res.status(403).json({
-      message:
-        'Invalid or expired token'
+      message: 'Invalid or expired token'
     });
   }
 }
@@ -131,148 +115,125 @@ function authenticateToken(
 // LOGIN
 // ============================================================
 
-app.post(
-  '/login',
-  async (req, res) => {
-    const {
-      email,
-      password
-    } = req.body;
+app.post('/login', async (req, res) => {
+  const {
+    email,
+    password
+  } = req.body;
 
-    try {
-      const result =
-        await pool.query(
-          `
-          SELECT
-            id,
-            email,
-            password_hash
-          FROM users
-          WHERE email = $1
-          `,
-          [email]
-        );
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        email,
+        password_hash
+      FROM users
+      WHERE email = $1
+      `,
+      [email]
+    );
 
-      if (
-        result.rows.length === 0
-      ) {
-        return res.status(401).json({
-          message:
-            'Invalid credentials'
-        });
-      }
-
-      const user =
-        result.rows[0];
-
-      const match =
-        await bcrypt.compare(
-          password,
-          user.password_hash
-        );
-
-      if (!match) {
-        return res.status(401).json({
-          message:
-            'Invalid credentials'
-        });
-      }
-
-      const token =
-        jwt.sign(
-          {
-            id: user.id,
-            email: user.email,
-            role: 'user'
-          },
-          JWT_SECRET,
-          {
-            expiresIn: '1h'
-          }
-        );
-
-      res.cookie(
-        'token',
-        token,
-        {
-          httpOnly: true,
-          secure: false,
-          sameSite: 'lax',
-          maxAge: 3600000
-        }
-      );
-
-      res.json({
-        message:
-          'Login successful',
-
-        user: {
-          id: user.id,
-          email: user.email
-        }
-      });
-
-    } catch (err) {
-      console.error(
-        'LOGIN ERROR:',
-        err
-      );
-
-      res.status(500).json({
-        message:
-          'Server error'
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        message: 'Invalid credentials'
       });
     }
+
+    const user = result.rows[0];
+
+    const match = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
+
+    if (!match) {
+      return res.status(401).json({
+        message: 'Invalid credentials'
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: 'user'
+      },
+      JWT_SECRET,
+      {
+        expiresIn: '1h'
+      }
+    );
+
+    res.cookie(
+      'token',
+      token,
+      {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 3600000
+      }
+    );
+
+    res.json({
+      message: 'Login successful',
+
+      user: {
+        id: user.id,
+        email: user.email
+      }
+    });
+
+  } catch (err) {
+    console.error(
+      'LOGIN ERROR:',
+      err
+    );
+
+    res.status(500).json({
+      message: 'Server error'
+    });
   }
-);
+});
 
 
 // ============================================================
 // GLOBAL AUTH PROTECTION
 // ============================================================
 
-app.use(
-  (req, res, next) => {
-    if (
-      req.path === '/login'
-    ) {
-      return next();
-    }
-
-    authenticateToken(
-      req,
-      res,
-      next
-    );
+app.use((req, res, next) => {
+  if (req.path === '/login') {
+    return next();
   }
-);
+
+  authenticateToken(
+    req,
+    res,
+    next
+  );
+});
 
 
 // ============================================================
 // USER PATH HELPERS
 // ============================================================
 
-function getUserMount(
-  userId
-) {
+function getUserMount(userId) {
   return path.join(
     BASE_MOUNT,
     `user-${userId}`
   );
 }
 
-function getUserInputDir(
-  userId
-) {
+function getUserInputDir(userId) {
   return path.join(
     getUserMount(userId),
     'input'
   );
 }
 
-function getUserOutputDir(
-  userId
-) {
+function getUserOutputDir(userId) {
   return path.join(
     getUserMount(userId),
     'output'
@@ -284,18 +245,12 @@ function getUserOutputDir(
 // USER DIRECTORIES
 // ============================================================
 
-function ensureUserDirectories(
-  userId
-) {
+function ensureUserDirectories(userId) {
   const inputDir =
-    getUserInputDir(
-      userId
-    );
+    getUserInputDir(userId);
 
   const outputDir =
-    getUserOutputDir(
-      userId
-    );
+    getUserOutputDir(userId);
 
   fs.mkdirSync(
     inputDir,
@@ -317,11 +272,7 @@ function ensureUserDirectories(
       'message.txt'
     );
 
-  if (
-    !fs.existsSync(
-      messagePath
-    )
-  ) {
+  if (!fs.existsSync(messagePath)) {
     fs.writeFileSync(
       messagePath,
       ''
@@ -344,11 +295,7 @@ async function copyDirectoryContents(
   sourceDir,
   destinationDir
 ) {
-  if (
-    !fs.existsSync(
-      sourceDir
-    )
-  ) {
+  if (!fs.existsSync(sourceDir)) {
     return;
   }
 
@@ -367,9 +314,7 @@ async function copyDirectoryContents(
       }
     );
 
-  for (
-    const entry of entries
-  ) {
+  for (const entry of entries) {
     const source =
       path.join(
         sourceDir,
@@ -382,9 +327,7 @@ async function copyDirectoryContents(
         entry.name
       );
 
-    if (
-      entry.isDirectory()
-    ) {
+    if (entry.isDirectory()) {
       await fs.promises.cp(
         source,
         destination,
@@ -401,10 +344,7 @@ async function copyDirectoryContents(
           fs.constants.COPYFILE_EXCL
         );
       } catch (err) {
-        if (
-          err.code !==
-          'EEXIST'
-        ) {
+        if (err.code !== 'EEXIST') {
           throw err;
         }
       }
@@ -417,23 +357,18 @@ async function copyDirectoryContents(
 // USER WORKSPACE
 // ============================================================
 
-async function ensureUserWorkspace(
-  userId
-) {
+async function ensureUserWorkspace(userId) {
+  const normalizedUserId =
+    String(userId).trim();
+
   const userRoot =
-    getUserMount(
-      userId
-    );
+    getUserMount(normalizedUserId);
 
   const userInputDir =
-    getUserInputDir(
-      userId
-    );
+    getUserInputDir(normalizedUserId);
 
   const userOutputDir =
-    getUserOutputDir(
-      userId
-    );
+    getUserOutputDir(normalizedUserId);
 
   const templateInputDir =
     path.join(
@@ -448,7 +383,7 @@ async function ensureUserWorkspace(
     );
 
   console.log(
-    `========== WORKSPACE SETUP START: USER ${userId} ==========`
+    `========== WORKSPACE SETUP START: USER ${normalizedUserId} ==========`
   );
 
   console.log(
@@ -489,11 +424,7 @@ async function ensureUserWorkspace(
       'server_two.js'
     );
 
-  if (
-    fs.existsSync(
-      sourceServerTwo
-    )
-  ) {
+  if (fs.existsSync(sourceServerTwo)) {
     await fs.promises.copyFile(
       sourceServerTwo,
       destinationServerTwo
@@ -512,9 +443,7 @@ async function ensureUserWorkspace(
       )
     );
 
-  if (
-    workspaceWasNew
-  ) {
+  if (workspaceWasNew) {
     await copyDirectoryContents(
       templateInputDir,
       userInputDir
@@ -534,7 +463,7 @@ async function ensureUserWorkspace(
     );
 
     console.log(
-      `Initialized workspace for user ${userId}`
+      `Initialized workspace for user ${normalizedUserId}`
     );
   }
 
@@ -558,11 +487,7 @@ async function ensureUserWorkspace(
       'message.txt'
     );
 
-  if (
-    !fs.existsSync(
-      messagePath
-    )
-  ) {
+  if (!fs.existsSync(messagePath)) {
     await fs.promises.writeFile(
       messagePath,
       ''
@@ -570,11 +495,11 @@ async function ensureUserWorkspace(
   }
 
   console.log(
-    `Workspace ready for user ${userId}: ${userRoot}`
+    `Workspace ready for user ${normalizedUserId}: ${userRoot}`
   );
 
   console.log(
-    `========== WORKSPACE SETUP COMPLETE: USER ${userId} ==========`
+    `========== WORKSPACE SETUP COMPLETE: USER ${normalizedUserId} ==========`
   );
 
   return {
@@ -595,17 +520,13 @@ function getUserWorkerLabels(
 ) {
   return {
     app: name,
-    user:
-      userId.toString()
+    user: String(userId)
   };
 }
 
-function getUserVolumeMount(
-  userId
-) {
+function getUserVolumeMount(userId) {
   return {
-    name:
-      'markov-app',
+    name: 'markov-app',
 
     mountPath:
       '/opt/app/MarkovProprietary/pipelinestages/app/mount',
@@ -618,12 +539,10 @@ function getUserVolumeMount(
 function getUserVolumes() {
   return [
     {
-      name:
-        'markov-app',
+      name: 'markov-app',
 
       persistentVolumeClaim: {
-        claimName:
-          'markov-app'
+        claimName: 'markov-app'
       }
     }
   ];
@@ -632,12 +551,18 @@ function getUserVolumes() {
 
 // ============================================================
 // LIGHTDOCK VOLUME MOUNT
+//
+// LightDock intentionally sees the entire PVC because
+// Run_Markov.py explicitly accesses:
+// /mount/user-{MARKOV_USER_ID}
+//
+// The worker identity is therefore passed explicitly through
+// argv[1] and MARKOV_USER_ID.
 // ============================================================
 
 function getLightdockVolumeMount() {
   return {
-    name:
-      'markov-app',
+    name: 'markov-app',
 
     mountPath:
       '/opt/app/MarkovProprietary/pipelinestages/app/mount'
@@ -649,29 +574,23 @@ function getLightdockVolumeMount() {
 // CODEL DOCKER SOCKET
 // ============================================================
 
-function getCodelVolumeMounts(
-  userId
-) {
+function getCodelVolumeMounts(userId) {
   return [
     {
-      name:
-        'docker-sock',
+      name: 'docker-sock',
 
       mountPath:
         '/var/run/docker.sock'
     },
 
-    getUserVolumeMount(
-      userId
-    )
+    getUserVolumeMount(userId)
   ];
 }
 
 function getCodelVolumes() {
   return [
     {
-      name:
-        'docker-sock',
+      name: 'docker-sock',
 
       hostPath: {
         path:
@@ -683,16 +602,15 @@ function getCodelVolumes() {
     },
 
     {
-      name:
-        'markov-app',
+      name: 'markov-app',
 
       persistentVolumeClaim: {
-        claimName:
-          'markov-app'
+        claimName: 'markov-app'
       }
     }
   ];
 }
+
 
 // ============================================================
 // USER APP DEPLOYMENT
@@ -705,77 +623,72 @@ async function ensureUserAppDeployment(
   servicePort,
   containerPort
 ) {
-  const normalizedUserId = String(userId).trim();
-  const name = `${appName}-${normalizedUserId}`.toLowerCase();
+  const normalizedUserId =
+    String(userId).trim();
 
-  const labelSelector = getUserWorkerLabels(
-    name,
-    normalizedUserId
-  );
+  const name =
+    `${appName}-${normalizedUserId}`.toLowerCase();
+
+  const labelSelector =
+    getUserWorkerLabels(
+      name,
+      normalizedUserId
+    );
 
   console.log(
     '============================================================'
   );
+
   console.log(
     `[USER ${normalizedUserId}] ENSURE APP: ${name}`
   );
+
   console.log(
     `[USER ${normalizedUserId}] Image: ${imageName}`
   );
-  console.log(
-    `[USER ${normalizedUserId}] Service Port: ${servicePort}`
-  );
-  console.log(
-    `[USER ${normalizedUserId}] Container Port: ${containerPort}`
-  );
+
   console.log(
     `[USER ${normalizedUserId}] Workspace: user-${normalizedUserId}`
   );
+
   console.log(
     `[USER ${normalizedUserId}] Node: ${MARKOV_WORKER_NODE}`
   );
+
   console.log(
     '============================================================'
   );
 
   let desiredVolumeMounts = [
-    getUserVolumeMount(normalizedUserId)
+    getUserVolumeMount(
+      normalizedUserId
+    )
   ];
 
-  let desiredVolumes = getUserVolumes();
+  let desiredVolumes =
+    getUserVolumes();
 
   let desiredEnv = [];
 
-  // ----------------------------------------------------------
-  // CODEL SPECIAL CONFIGURATION
-  // ----------------------------------------------------------
-
   if (appName === 'codel') {
-    desiredVolumeMounts = getCodelVolumeMounts(
-      normalizedUserId
-    );
+    desiredVolumeMounts =
+      getCodelVolumeMounts(
+        normalizedUserId
+      );
 
-    desiredVolumes = getCodelVolumes();
+    desiredVolumes =
+      getCodelVolumes();
 
     desiredEnv = [
       {
-        name: 'CODEL_BROWSER_NAME',
-        value: `codel-browser-${normalizedUserId}`
+        name:
+          'CODEL_BROWSER_NAME',
+
+        value:
+          `codel-browser-${normalizedUserId}`
       }
     ];
-
-    console.log(
-      `[USER ${normalizedUserId}] ${name} is CODEL`
-    );
-
-    console.log(
-      `[USER ${normalizedUserId}] CODEL_BROWSER_NAME=codel-browser-${normalizedUserId}`
-    );
   }
-
-  // ==========================================================
-  // ENSURE DEPLOYMENT
-  // ==========================================================
 
   let existingDeployment = null;
 
@@ -786,32 +699,27 @@ async function ensureUserAppDeployment(
         namespace: NAMESPACE
       });
 
-    existingDeployment = result.body;
+    existingDeployment =
+      result.body;
 
   } catch (err) {
     const statusCode =
       getKubernetesStatusCode(err);
-
-    console.log(
-      `[USER ${normalizedUserId}] read deployment ${name} status=${statusCode}`
-    );
 
     if (Number(statusCode) !== 404) {
       throw err;
     }
   }
 
+
   // ==========================================================
-  // CREATE DEPLOYMENT IF MISSING
+  // CREATE DEPLOYMENT
   // ==========================================================
 
   if (!existingDeployment) {
-    console.log(
-      `[USER ${normalizedUserId}] Creating deployment ${name}`
-    );
-
     const deploymentManifest = {
       apiVersion: 'apps/v1',
+
       kind: 'Deployment',
 
       metadata: {
@@ -833,12 +741,15 @@ async function ensureUserAppDeployment(
           },
 
           spec: {
-            nodeName: MARKOV_WORKER_NODE,
+            nodeName:
+              MARKOV_WORKER_NODE,
 
             containers: [
               {
                 name: appName,
+
                 image: imageName,
+
                 env: desiredEnv,
 
                 ports: [
@@ -847,11 +758,13 @@ async function ensureUserAppDeployment(
                   }
                 ],
 
-                volumeMounts: desiredVolumeMounts
+                volumeMounts:
+                  desiredVolumeMounts
               }
             ],
 
-            volumes: desiredVolumes
+            volumes:
+              desiredVolumes
           }
         }
       }
@@ -872,23 +785,19 @@ async function ensureUserAppDeployment(
         getKubernetesStatusCode(createErr);
 
       if (Number(statusCode) === 409) {
-        console.log(
-          `[USER ${normalizedUserId}] Deployment ${name} was created concurrently; re-reading`
-        );
-
-        const reread =
-          await k8sAppsApi.readNamespacedDeployment({
-            name,
-            namespace: NAMESPACE
-          });
-
-        existingDeployment = reread.body;
-
+        existingDeployment =
+          (
+            await k8sAppsApi.readNamespacedDeployment({
+              name,
+              namespace: NAMESPACE
+            })
+          ).body;
       } else {
         throw createErr;
       }
     }
   }
+
 
   // ==========================================================
   // RECONCILE EXISTING DEPLOYMENT
@@ -931,9 +840,11 @@ async function ensureUserAppDeployment(
     const desiredMountPath =
       '/opt/app/MarkovProprietary/pipelinestages/app/mount';
 
-    // --------------------------------------------------------
-    // CODEL DOCKER SOCKET CHECK
-    // --------------------------------------------------------
+    const existingPort =
+      existingContainer?.ports?.find(
+        port =>
+          port.containerPort === containerPort
+      );
 
     let needsDockerSocket = false;
 
@@ -959,23 +870,7 @@ async function ensureUserAppDeployment(
           '/var/run/docker.sock' ||
         existingDockerVolume?.hostPath?.type !==
           'Socket';
-
-      console.log(
-        `[USER ${normalizedUserId}] docker socket mount=${
-          existingDockerMount?.mountPath || '<none>'
-        }`
-      );
-
-      console.log(
-        `[USER ${normalizedUserId}] docker socket volume=${
-          existingDockerVolume?.hostPath?.path || '<none>'
-        }`
-      );
     }
-
-    // --------------------------------------------------------
-    // CODEL BROWSER ENV CHECK
-    // --------------------------------------------------------
 
     let needsCodelBrowserEnv = false;
 
@@ -990,27 +885,7 @@ async function ensureUserAppDeployment(
         !existingBrowserEnv ||
         existingBrowserEnv.value !==
           `codel-browser-${normalizedUserId}`;
-
-      console.log(
-        `[USER ${normalizedUserId}] CODEL_BROWSER_NAME=${
-          existingBrowserEnv?.value || '<none>'
-        }`
-      );
     }
-
-    // --------------------------------------------------------
-    // PORT CHECK
-    // --------------------------------------------------------
-
-    const existingPort =
-      existingContainer?.ports?.find(
-        port =>
-          port.containerPort === containerPort
-      );
-
-    // --------------------------------------------------------
-    // DETERMINE WHETHER RECONCILIATION IS NEEDED
-    // --------------------------------------------------------
 
     const needsCorrection =
       !existingContainer ||
@@ -1023,60 +898,32 @@ async function ensureUserAppDeployment(
       needsDockerSocket ||
       needsCodelBrowserEnv;
 
-    console.log(
-      `[USER ${normalizedUserId}] ${name} exists`
-    );
-
-    console.log(
-      `[USER ${normalizedUserId}] replicas=${existingReplicas}`
-    );
-
-    console.log(
-      `[USER ${normalizedUserId}] image=${existingImage}`
-    );
-
-    console.log(
-      `[USER ${normalizedUserId}] node=${existingNodeName}`
-    );
-
-    console.log(
-      `[USER ${normalizedUserId}] workspace=${existingSubPath}`
-    );
-
-    // --------------------------------------------------------
-    // RECONCILE
-    // --------------------------------------------------------
-
     if (needsCorrection) {
-      console.log(
-        `[USER ${normalizedUserId}] RECONCILING ${name}`
-      );
-
       existingDeployment.spec.replicas = 1;
+
+      existingDeployment.metadata.labels =
+        labelSelector;
 
       existingDeployment.spec.selector = {
         matchLabels: labelSelector
       };
 
       existingDeployment.spec.template.metadata = {
-        ...existingDeployment.spec.template.metadata,
         labels: labelSelector
-      };
-
-      existingDeployment.metadata.labels = {
-        ...existingDeployment.metadata.labels,
-        ...labelSelector
       };
 
       existingDeployment.spec.template.spec = {
         ...existingDeployment.spec.template.spec,
 
-        nodeName: MARKOV_WORKER_NODE,
+        nodeName:
+          MARKOV_WORKER_NODE,
 
         containers: [
           {
             name: appName,
+
             image: imageName,
+
             env: desiredEnv,
 
             ports: [
@@ -1085,11 +932,13 @@ async function ensureUserAppDeployment(
               }
             ],
 
-            volumeMounts: desiredVolumeMounts
+            volumeMounts:
+              desiredVolumeMounts
           }
         ],
 
-        volumes: desiredVolumes
+        volumes:
+          desiredVolumes
       };
 
       await k8sAppsApi.replaceNamespacedDeployment({
@@ -1101,16 +950,12 @@ async function ensureUserAppDeployment(
       console.log(
         `[USER ${normalizedUserId}] ${name} reconciled`
       );
-
-    } else {
-      console.log(
-        `[USER ${normalizedUserId}] ${name} already correct`
-      );
     }
   }
 
+
   // ==========================================================
-  // ENSURE SERVICE EXISTS
+  // ENSURE SERVICE
   // ==========================================================
 
   let existingService = null;
@@ -1122,30 +967,19 @@ async function ensureUserAppDeployment(
         namespace: NAMESPACE
       });
 
-    existingService = result.body;
+    existingService =
+      result.body;
 
   } catch (err) {
     const statusCode =
       getKubernetesStatusCode(err);
-
-    console.log(
-      `[USER ${normalizedUserId}] read service ${name} status=${statusCode}`
-    );
 
     if (Number(statusCode) !== 404) {
       throw err;
     }
   }
 
-  // ==========================================================
-  // CREATE SERVICE
-  // ==========================================================
-
   if (!existingService) {
-    console.log(
-      `[USER ${normalizedUserId}] Creating service ${name}`
-    );
-
     const serviceManifest = {
       apiVersion: 'v1',
 
@@ -1174,33 +1008,16 @@ async function ensureUserAppDeployment(
         body: serviceManifest
       });
 
-      console.log(
-        `[USER ${normalizedUserId}] Service ${name} created`
-      );
-
     } catch (serviceErr) {
       const statusCode =
         getKubernetesStatusCode(serviceErr);
 
-      if (Number(statusCode) === 409) {
-        console.log(
-          `[USER ${normalizedUserId}] Service ${name} was created concurrently; continuing`
-        );
-      } else {
+      if (Number(statusCode) !== 409) {
         throw serviceErr;
       }
     }
 
   } else {
-
-    // ========================================================
-    // RECONCILE EXISTING SERVICE
-    // ========================================================
-
-    console.log(
-      `[USER ${normalizedUserId}] Service ${name} already exists`
-    );
-
     const existingServicePort =
       existingService.spec?.ports?.find(
         port =>
@@ -1217,10 +1034,6 @@ async function ensureUserAppDeployment(
         JSON.stringify(labelSelector);
 
     if (serviceNeedsCorrection) {
-      console.log(
-        `[USER ${normalizedUserId}] RECONCILING SERVICE ${name}`
-      );
-
       existingService.spec.selector =
         labelSelector;
 
@@ -1236,41 +1049,95 @@ async function ensureUserAppDeployment(
         namespace: NAMESPACE,
         body: existingService
       });
-
-      console.log(
-        `[USER ${normalizedUserId}] SERVICE ${name} RECONCILED`
-      );
-
-    } else {
-      console.log(
-        `[USER ${normalizedUserId}] SERVICE ${name} already correct`
-      );
     }
   }
 }
 
+
 // ============================================================
-// PERSISTENT LIGHTDOCK WORKER
+// LIGHTDOCK DEPLOYMENT
+//
+// CRITICAL:
+//
+// For user 3:
+//
+//   argv[1]          = "3"
+//   MARKOV_USER_ID   = "3"
+//
+// run_lightdock.sh receives "$1" = "3".
+//
+// The Python worker must therefore receive:
+//
+//   Run_Markov.py 3
+//
+// This prevents LightDock from silently using user 1.
 // ============================================================
 
 async function ensureUserLightdockDeployment(
   userId
 ) {
+  const normalizedUserId =
+    String(userId).trim();
+
+  if (!normalizedUserId) {
+    throw new Error(
+      'LightDock requires a user ID'
+    );
+  }
+
+  if (!/^\d+$/.test(normalizedUserId)) {
+    throw new Error(
+      `Invalid LightDock user ID: ${normalizedUserId}`
+    );
+  }
+
   const appName =
     'lightdock';
 
   const name =
-    `${appName}-${userId}`.toLowerCase();
+    `${appName}-${normalizedUserId}`.toLowerCase();
 
   const desiredImage =
     LIGHTDOCK_IMAGE;
 
+  // ----------------------------------------------------------
+  // IMPORTANT:
+  //
+  // This passes the user ID to run_lightdock.sh as $1.
+  //
+  // Example:
+  //
+  // run_lightdock.sh 3
+  //
+  // ----------------------------------------------------------
+
   const desiredCommand = [
     '/bin/sh',
     '-c',
+
     'chmod u+x /opt/app/lightdock/run_lightdock.sh && exec /bin/sh /opt/app/lightdock/run_lightdock.sh "$1"',
+
     '--',
-    userId.toString()
+
+    normalizedUserId
+  ];
+
+  // No Kubernetes container args are necessary because the
+  // user ID is already supplied as $1 to the shell command.
+  const desiredArgs = [];
+
+  // ----------------------------------------------------------
+  // SECOND USER-ID SAFEGUARD
+  // ----------------------------------------------------------
+
+  const desiredEnv = [
+    {
+      name:
+        'MARKOV_USER_ID',
+
+      value:
+        normalizedUserId
+    }
   ];
 
   const desiredVolumeMounts = [
@@ -1280,46 +1147,41 @@ async function ensureUserLightdockDeployment(
   const desiredVolumes =
     getUserVolumes();
 
-  console.log('');
-
   console.log(
     '============================================================'
   );
 
   console.log(
-    `[USER ${userId}] ENSURE LIGHTDOCK: ${name}`
+    `[USER ${normalizedUserId}] ENSURE LIGHTDOCK: ${name}`
   );
 
   console.log(
-    `[USER ${userId}] Image: ${desiredImage}`
+    `[USER ${normalizedUserId}] Image: ${desiredImage}`
   );
 
   console.log(
-    `[USER ${userId}] Command: ${desiredCommand.join(' ')}`
+    `[USER ${normalizedUserId}] MARKOV_USER_ID=${normalizedUserId}`
   );
 
   console.log(
-    `[USER ${userId}] Workspace: user-${userId}`
+    `[USER ${normalizedUserId}] Worker argv[1]=${normalizedUserId}`
   );
 
   console.log(
-    `[USER ${userId}] Node: ${MARKOV_WORKER_NODE}`
+    `[USER ${normalizedUserId}] Node: ${MARKOV_WORKER_NODE}`
   );
 
   console.log(
     '============================================================'
   );
 
-  let existing =
-    null;
+  let existing = null;
 
   try {
     const result =
       await k8sAppsApi.readNamespacedDeployment({
         name,
-
-        namespace:
-          NAMESPACE
+        namespace: NAMESPACE
       });
 
     existing =
@@ -1327,313 +1189,172 @@ async function ensureUserLightdockDeployment(
 
   } catch (err) {
     const statusCode =
-      getKubernetesStatusCode(
-        err
-      );
+      getKubernetesStatusCode(err);
 
     console.log(
-      `[USER ${userId}] read deployment ${name} status=${statusCode}`
+      `[USER ${normalizedUserId}] read deployment ${name} status=${statusCode}`
     );
 
-    if (
-      Number(statusCode) !==
-      404
-    ) {
+    if (Number(statusCode) !== 404) {
       throw err;
     }
   }
 
 
   // ==========================================================
-  // CHECK EXISTING LIGHTDOCK
+  // DEPLOYMENT MANIFEST
   // ==========================================================
 
-  if (
-    existing
-  ) {
-    console.log(
-      `[USER ${userId}] ${name} exists`
-    );
+  const deployment = {
+    apiVersion: 'apps/v1',
 
-    const currentContainer =
-      existing
-        .spec
-        ?.template
-        ?.spec
-        ?.containers
-        ?.[0];
+    kind: 'Deployment',
 
-    const currentImage =
-      currentContainer
-        ?.image;
+    metadata: {
+      name,
+      namespace: NAMESPACE,
 
-    const currentCommand =
-      currentContainer
-        ?.command ||
-      [];
-
-    // IMPORTANT:
-    // The previous version of this code did NOT check
-    // existing.spec.replicas.
-    //
-    // If lightdock-3 had accidentally been scaled to hundreds
-    // of replicas, the old code considered the Deployment
-    // "correct" and returned without changing the replica count.
-    //
-    // Kubernetes then continued creating Pods to satisfy that
-    // desired replica count.
-    const currentReplicas =
-      existing
-        .spec
-        ?.replicas;
-
-    const currentNodeName =
-      existing
-        .spec
-        ?.template
-        ?.spec
-        ?.nodeName;
-
-    const currentMount =
-      currentContainer
-        ?.volumeMounts
-        ?.find(
-          mount =>
-            mount.name ===
-            'markov-app'
-        );
-
-    const currentMountPath =
-      currentMount
-        ?.mountPath;
-
-    const currentSubPath =
-      currentMount
-        ?.subPath;
-
-    const desiredMountPath =
-      '/opt/app/MarkovProprietary/pipelinestages/app/mount';
-
-    console.log(
-      `[USER ${userId}] replicas=${currentReplicas}`
-    );
-
-    console.log(
-      `[USER ${userId}] image=${currentImage}`
-    );
-
-    console.log(
-      `[USER ${userId}] command=${JSON.stringify(currentCommand)}`
-    );
-
-    console.log(
-      `[USER ${userId}] node=${currentNodeName}`
-    );
-
-    console.log(
-      `[USER ${userId}] mountPath=${currentMountPath}`
-    );
-
-    console.log(
-      `[USER ${userId}] subPath=${currentSubPath || '<none>'}`
-    );
-
-    // ========================================================
-    // IMPORTANT FIX
-    //
-    // Lightdock MUST have exactly ONE replica.
-    //
-    // If the Deployment has any other replica count, force
-    // reconciliation even when every other field is correct.
-    // ========================================================
-
-    const needsCorrection =
-      currentReplicas !==
-        1 ||
-
-      currentImage !==
-        desiredImage ||
-
-      JSON.stringify(
-        currentCommand
-      ) !==
-        JSON.stringify(
-          desiredCommand
-        ) ||
-
-      currentNodeName !==
-        MARKOV_WORKER_NODE ||
-
-      currentMountPath !==
-        desiredMountPath ||
-
-      currentSubPath !==
-        undefined;
-
-    if (
-      !needsCorrection
-    ) {
-      console.log(
-        `[USER ${userId}] ${name} already correct`
-      );
-
-      return;
-    }
-
-    console.log(
-      `[USER ${userId}] RECONCILING ${name}`
-    );
-
-    if (
-      currentReplicas !==
-      1
-    ) {
-      console.log(
-        `[USER ${userId}] FIXING REPLICAS: ${currentReplicas} -> 1`
-      );
-    }
-  }
-
-
-  // ==========================================================
-  // LIGHTDOCK DEPLOYMENT MANIFEST
-  // ==========================================================
-
-const deployment = {
-  apiVersion: 'apps/v1',
-
-  kind: 'Deployment',
-
-  metadata: {
-    name,
-    namespace: NAMESPACE,
-
-    labels: {
-      app: name,
-      user: normalizedUserId
-    }
-  },
-
-  spec: {
-    replicas: 1,
-
-    strategy: {
-      type: 'Recreate'
-    },
-
-    selector: {
-      matchLabels: {
-        app: name
+      labels: {
+        app: name,
+        user: normalizedUserId
       }
     },
 
-    template: {
-      metadata: {
-        labels: {
-          app: name,
-          user: normalizedUserId
+    spec: {
+      replicas: 1,
+
+      strategy: {
+        type: 'Recreate'
+      },
+
+      selector: {
+        matchLabels: {
+          app: name
         }
       },
 
-      spec: {
-        nodeName: MARKOV_WORKER_NODE,
+      template: {
+        metadata: {
+          labels: {
+            app: name,
+            user: normalizedUserId
+          }
+        },
 
-        containers: [
-          {
-            name: appName,
+        spec: {
+          nodeName:
+            MARKOV_WORKER_NODE,
 
-            image: desiredImage,
+          containers: [
+            {
+              name: appName,
 
-            command: desiredCommand,
+              image: desiredImage,
 
-            args: desiredArgs,
+              command:
+                desiredCommand,
 
-            env: desiredEnv,
+              args:
+                desiredArgs,
 
-            resources: {
-              requests: {
-                cpu: '4',
-                memory: '12Gi'
+              env:
+                desiredEnv,
+
+              resources: {
+                requests: {
+                  cpu: '4',
+                  memory: '12Gi'
+                },
+
+                limits: {
+                  cpu: '4',
+                  memory: '12Gi'
+                }
               },
 
-              limits: {
-                cpu: '4',
-                memory: '12Gi'
-              }
-            },
+              volumeMounts:
+                desiredVolumeMounts
+            }
+          ],
 
-            volumeMounts: desiredVolumeMounts
-          }
-        ],
+          volumes:
+            desiredVolumes,
 
-        volumes: desiredVolumes,
-
-        restartPolicy: 'Always'
+          restartPolicy:
+            'Always'
+        }
       }
     }
-  }
-};
+  };
+
 
   // ==========================================================
-  // CREATE OR REPLACE LIGHTDOCK
+  // CREATE OR REPLACE
   // ==========================================================
 
-  if (
-    existing
-  ) {
+  if (!existing) {
     console.log(
-      `[USER ${userId}] Updating ${name}`
-    );
-
-    // Explicitly guarantee that the object being sent to
-    // Kubernetes has replicas=1.
-    deployment.spec.replicas = 1;
-
-    await k8sAppsApi.replaceNamespacedDeployment({
-      name,
-
-      namespace:
-        NAMESPACE,
-
-      body:
-        deployment
-    });
-
-  } else {
-    console.log(
-      `[USER ${userId}] Creating ${name}`
+      `[USER ${normalizedUserId}] Creating ${name}`
     );
 
     try {
       await k8sAppsApi.createNamespacedDeployment({
-        namespace:
-          NAMESPACE,
-
-        body:
-          deployment
+        namespace: NAMESPACE,
+        body: deployment
       });
+
+      console.log(
+        `[USER ${normalizedUserId}] ${name} created`
+      );
 
     } catch (err) {
       const statusCode =
-        getKubernetesStatusCode(
-          err
-        );
+        getKubernetesStatusCode(err);
 
-      if (
-        Number(statusCode) ===
-        409
-      ) {
+      if (Number(statusCode) === 409) {
         console.log(
-          `[USER ${userId}] ${name} was created concurrently`
+          `[USER ${normalizedUserId}] ${name} was created concurrently`
         );
       } else {
         throw err;
       }
     }
+
+  } else {
+
+    // --------------------------------------------------------
+    // ALWAYS reconcile the LightDock deployment.
+    //
+    // This is intentional because the worker identity is
+    // critical. We do not want an old Deployment specification
+    // surviving after the Node code changes.
+    // --------------------------------------------------------
+
+    console.log(
+      `[USER ${normalizedUserId}] Replacing existing ${name}`
+    );
+
+    await k8sAppsApi.replaceNamespacedDeployment({
+      name,
+      namespace: NAMESPACE,
+      body: deployment
+    });
+
+    console.log(
+      `[USER ${normalizedUserId}] ${name} reconciled`
+    );
   }
 
   console.log(
-    `[USER ${userId}] ${name} deployment reconciled with replicas=1`
+    `[USER ${normalizedUserId}] LightDock configured with explicit user identity`
+  );
+
+  console.log(
+    `[USER ${normalizedUserId}] argv[1]=${normalizedUserId}`
+  );
+
+  console.log(
+    `[USER ${normalizedUserId}] MARKOV_USER_ID=${normalizedUserId}`
   );
 }
 
@@ -1645,20 +1366,23 @@ const deployment = {
 async function provisionUserEnvironment(
   userId
 ) {
+  const normalizedUserId =
+    String(userId).trim();
+
   console.log(
     '============================================================'
   );
 
   console.log(
-    `[USER ${userId}] STARTING COMPLETE USER ENVIRONMENT`
+    `[USER ${normalizedUserId}] STARTING COMPLETE USER ENVIRONMENT`
   );
 
   console.log(
-    `[USER ${userId}] USER WORKSPACE: user-${userId}`
+    `[USER ${normalizedUserId}] USER WORKSPACE: user-${normalizedUserId}`
   );
 
   console.log(
-    `[USER ${userId}] MARKOV NODE: ${MARKOV_WORKER_NODE}`
+    `[USER ${normalizedUserId}] MARKOV NODE: ${MARKOV_WORKER_NODE}`
   );
 
   console.log(
@@ -1666,55 +1390,35 @@ async function provisionUserEnvironment(
   );
 
   await ensureUserWorkspace(
-    userId
-  );
-
-  console.log(
-    `[USER ${userId}] WORKSPACE READY`
-  );
-
-  console.log(
-    `[USER ${userId}] ENSURING downloadapp-${userId}`
+    normalizedUserId
   );
 
   await ensureUserAppDeployment(
-    userId,
+    normalizedUserId,
     'downloadapp',
     DOWNLOADAPP_IMAGE,
     3001,
     80
   );
 
-  console.log(
-    `[USER ${userId}] ENSURING viewer-${userId}`
-  );
-
   await ensureUserAppDeployment(
-    userId,
+    normalizedUserId,
     'viewer',
     VIEWER_IMAGE,
     8083,
     80
   );
 
-  console.log(
-    `[USER ${userId}] ENSURING codel-${userId}`
-  );
-
   await ensureUserAppDeployment(
-    userId,
+    normalizedUserId,
     'codel',
     CODEL_IMAGE,
     8887,
     8080
   );
 
-  console.log(
-    `[USER ${userId}] ENSURING lightdock-${userId}`
-  );
-
   await ensureUserLightdockDeployment(
-    userId
+    normalizedUserId
   );
 
   console.log(
@@ -1722,7 +1426,7 @@ async function provisionUserEnvironment(
   );
 
   console.log(
-    `[USER ${userId}] COMPLETE USER ENVIRONMENT READY`
+    `[USER ${normalizedUserId}] COMPLETE USER ENVIRONMENT READY`
   );
 
   console.log(
@@ -1739,7 +1443,8 @@ app.post(
   '/html/simulate',
   authenticateToken,
   async (req, res) => {
-    const userId = String(req.user?.id ?? '').trim();
+    const userId =
+      String(req.user?.id ?? '').trim();
 
     if (!userId) {
       console.error(
@@ -1748,7 +1453,8 @@ app.post(
 
       return res.status(401).json({
         ok: false,
-        error: 'authenticated user has no ID'
+        error:
+          'authenticated user has no ID'
       });
     }
 
@@ -1758,9 +1464,6 @@ app.post(
           userId
         );
 
-      const inputDir =
-        workspace.input;
-
       const src =
         path.resolve(
           __dirname,
@@ -1769,7 +1472,7 @@ app.post(
 
       const dest =
         path.join(
-          inputDir,
+          workspace.input,
           'ping.json'
         );
 
@@ -1783,11 +1486,8 @@ app.post(
       );
 
       res.json({
-        ok:
-          true,
-
-        user_id:
-          userId
+        ok: true,
+        user_id: userId
       });
 
     } catch (err) {
@@ -1823,8 +1523,7 @@ app.post(
 
     if (
       !filename ||
-      typeof filename !==
-        'string'
+      typeof filename !== 'string'
     ) {
       return res.status(400).json({
         error:
@@ -1833,13 +1532,10 @@ app.post(
     }
 
     const safeFilename =
-      path.basename(
-        filename
-      );
+      path.basename(filename);
 
     if (
-      safeFilename !==
-      filename
+      safeFilename !== filename
     ) {
       return res.status(400).json({
         error:
@@ -1854,27 +1550,19 @@ app.post(
 
       const file =
         path.join(
-          getUserInputDir(
-            userId
-          ),
+          getUserInputDir(userId),
           safeFilename
         );
 
       await fs.promises.writeFile(
         file,
-        content ||
-          ''
+        content || ''
       );
 
       res.json({
-        ok:
-          true,
-
-        user_id:
-          userId,
-
-        filename:
-          safeFilename
+        ok: true,
+        user_id: userId,
+        filename: safeFilename
       });
 
     } catch (err) {
@@ -1919,25 +1607,17 @@ app.get(
 
     const file =
       path.join(
-        getUserInputDir(
-          userId
-        ),
+        getUserInputDir(userId),
         safeFilename
       );
 
-    if (
-      !fs.existsSync(
-        file
-      )
-    ) {
+    if (!fs.existsSync(file)) {
       return res.status(404).send(
         'Not found'
       );
     }
 
-    res.sendFile(
-      file
-    );
+    res.sendFile(file);
   }
 );
 
@@ -1955,17 +1635,11 @@ app.get(
 
     const file =
       path.join(
-        getUserOutputDir(
-          userId
-        ),
+        getUserOutputDir(userId),
         'message.txt'
       );
 
-    if (
-      !fs.existsSync(
-        file
-      )
-    ) {
+    if (!fs.existsSync(file)) {
       return res.status(404).send(
         'Not found'
       );
@@ -1976,9 +1650,7 @@ app.get(
       'text/plain'
     );
 
-    fs.createReadStream(
-      file
-    ).pipe(res);
+    fs.createReadStream(file).pipe(res);
   }
 );
 
@@ -2001,14 +1673,15 @@ app.get(
     }
 
     try {
-      jwt.verify(
-        token,
-        JWT_SECRET
-      );
+      const decoded =
+        jwt.verify(
+          token,
+          JWT_SECRET
+        );
 
       return res.status(200).json({
-        ok:
-          true
+        ok: true,
+        user_id: decoded.id
       });
 
     } catch (err) {
@@ -2061,9 +1734,7 @@ app.post(
       !query.trim()
     ) {
       return res.status(400).json({
-        ok:
-          false,
-
+        ok: false,
         error:
           'query is required'
       });
@@ -2075,12 +1746,9 @@ app.post(
           userId
         );
 
-      const inputDir =
-        workspace.input;
-
       const namesPath =
         path.join(
-          inputDir,
+          workspace.input,
           'names.txt'
         );
 
@@ -2094,17 +1762,10 @@ app.post(
       );
 
       return res.json({
-        ok:
-          true,
-
-        user_id:
-          userId,
-
-        query:
-          query.trim(),
-
-        file:
-          namesPath
+        ok: true,
+        user_id: userId,
+        query: query.trim(),
+        file: namesPath
       });
 
     } catch (err) {
@@ -2114,9 +1775,7 @@ app.post(
       );
 
       return res.status(500).json({
-        ok:
-          false,
-
+        ok: false,
         error:
           'failed to write query'
       });
@@ -2138,4 +1797,3 @@ app.listen(
     );
   }
 );
-
